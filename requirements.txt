@@ -4,6 +4,7 @@ pescador
 matplotlib
 
 torch
+torchaudio
 torchvision
 tensorboard
 

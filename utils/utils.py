@@ -12,27 +12,39 @@ from config import EPOCHS, BATCH_SIZE
 from config import SAMPLE_EVERY, SAMPLE_NUM
 from config import DATASET_NAME, OUTPUT_PATH
 from torch import autograd
-from torch.autograd import Variable
+# from torch.autograd import Variable
 import matplotlib
+
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
-
+# File Logger Configfuration
 LOGGER = logging.getLogger('wavegan')
 LOGGER.setLevel(logging.DEBUG)
 
 
 def make_path(output_path):
+    """
+    Create folder
+    :param output_path: full paths to create folders
+    :return: created folders with full paths.
+    """
     if not os.path.isdir(output_path):
         os.makedirs(output_path)
     return output_path
 
 
+# Dataset folder path creatation configuration
 traindata = DATASET_NAME
 output = make_path(OUTPUT_PATH)
 
 
 def time_since(since):
+    """
+    Measures time in human readable format.
+    :param since: point in time to measure
+    :return: difference between two time points
+    """
     now = time.time()
     s = now - since
     m = math.floor(s / 60)
@@ -42,20 +54,32 @@ def time_since(since):
 
 def save_samples(epoch_samples, epoch, output_dir, fs=16000):
     """
-    Save output samples.
+    Save output samples for each iteration to examine progress
+    :param epoch_samples: samples for each iteration
+    :param epoch: iteration number
+    :param output_dir: output directory
+    :param fs: sampling frequency
+    :return: None
     """
     sample_dir = make_path(os.path.join(output_dir, str(epoch)))
 
     for idx, sample in enumerate(epoch_samples):
-        output_path = os.path.join(sample_dir, "{}.wav".format(idx+1))
+        output_path = os.path.join(sample_dir, "{}.wav".format(idx + 1))
         sample = sample[0]
         librosa.output.write_wav(output_path, sample, fs)
 
 
+# TODO: replace librosa with torchaudio
 # Adapted from @jtcramer https://github.com/jtcramer/wavegan/blob/master/sample.py.
 def sample_generator(filepath, window_length=16384, fs=16000):
     """
-    Audio sample generator
+    Audio sample generator from dataset
+    :param filepath: Full path for dataset
+    :param window_length: windowing lenght.
+     function sampling with a windowing technique.
+    :param fs: sampling frequency
+    :return: gives a generator to iterate over big dataset
+        :type: return type is generator
     """
     try:
         audio_data, _ = librosa.load(filepath, sr=fs)
@@ -94,7 +118,13 @@ def sample_generator(filepath, window_length=16384, fs=16000):
         yield {'X': sample}
 
 
+# TODO: replace with torchaudio
 def get_all_audio_filepaths(audio_dir):
+    """
+    Returns all available audio file paths
+    :param audio_dir: audio dataset directory
+    :return: all available audio file paths
+    """
     return [os.path.join(root, fname)
             for (root, dir_names, file_names) in os.walk(audio_dir, followlinks=True)
             for fname in file_names
@@ -103,6 +133,13 @@ def get_all_audio_filepaths(audio_dir):
 
 
 def batch_generator(audio_path_list, batch_size):
+    """
+    Generates batches to input algorithm(NN)
+        batch <-> bunch of samples inputs algorithm(NN) one at a time
+    :param audio_path_list: list of all paths of audio dataset
+    :param batch_size: size(lenght) of batch
+    :return: generated batch
+    """
     streamers = []
     for audio_path in audio_path_list:
         s = pescador.Streamer(sample_generator, audio_path)
@@ -114,7 +151,18 @@ def batch_generator(audio_path_list, batch_size):
     return batch_gen
 
 
+# TODO: replace with torchaudio
 def split_data(audio_path_list, valid_ratio, test_ratio, batch_size):
+    """
+    split data into *Train, *Validation(dev), *Test
+    :param audio_path_list: list of all paths of audio dataset
+    :param valid_ratio: *Validation dataset split radio.
+        *Validation data has to came from same distribution with *Train data
+    :param test_ratio: *Test dataset split radio.
+        Test data can be very big so that test with little test samples
+    :param batch_size:
+    :return:
+    """
     num_files = len(audio_path_list)
     num_valid = int(np.ceil(num_files * valid_ratio))
     num_test = int(np.ceil(num_files * test_ratio))
@@ -149,7 +197,8 @@ def calc_gradient_penalty(net_dis, real_data, fake_data, batch_size, lmbda, use_
     interpolates = alpha * real_data + (1 - alpha) * fake_data
     if use_cuda:
         interpolates = interpolates.cuda()
-    interpolates = autograd.Variable(interpolates, requires_grad=True)
+    # interpolates = autograd.Variable(interpolates, requires_grad=True)
+    interpolates.requires_grad = True
 
     # Evaluate discriminator
     disc_interpolates = net_dis(interpolates)
@@ -175,7 +224,8 @@ def numpy_to_var(numpy_data, cuda):
     data = torch.Tensor(data)
     if cuda:
         data = data.cuda()
-    return Variable(data, requires_grad=False)
+    data.requires_grad = False
+    return data  # Variable(data, requires_grad=False)
 
 
 def plot_loss(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid,
@@ -246,7 +296,9 @@ def parse_arguments():
     parser.add_argument('-bo', '--beta-one', dest='beta1', type=float, default=0.5, help='beta_1 ADAM parameter')
     parser.add_argument('-bt', '--beta-two', dest='beta2', type=float, default=0.9, help='beta_2 ADAM parameter')
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true')
-    parser.add_argument('-audio_dir', '--audio_dir', dest='audio_dir', type=str, default=traindata, help='Path to directory containing audio files')
-    parser.add_argument('-output_dir', '--output_dir', dest='output_dir', type=str, default=output, help='Path to directory where model files will be output')
+    parser.add_argument('-audio_dir', '--audio_dir', dest='audio_dir', type=str, default=traindata,
+                        help='Path to directory containing audio files')
+    parser.add_argument('-output_dir', '--output_dir', dest='output_dir', type=str, default=output,
+                        help='Path to directory where model files will be output')
     args = parser.parse_args()
     return vars(args)
