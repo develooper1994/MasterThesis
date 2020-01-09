@@ -52,7 +52,7 @@ def time_since(since):
     return '%dm %ds' % (m, s)
 
 
-def save_samples(epoch_samples, epoch, output_dir, fs=16000):
+def save_samples(epoch_samples, epoch, output_dir, fs=16000) -> None:
     """
     Save output samples for each iteration to examine progress
     :param epoch_samples: samples for each iteration
@@ -154,14 +154,14 @@ def batch_generator(audio_path_list, batch_size):
 # TODO: replace with torchaudio
 def split_data(audio_path_list, valid_ratio, test_ratio, batch_size):
     """
-    split data into *Train, *Validation(dev), *Test
+    Split data into *Train, *Validation(dev), *Test
     :param audio_path_list: list of all paths of audio dataset
     :param valid_ratio: *Validation dataset split radio.
         *Validation data has to came from same distribution with *Train data
     :param test_ratio: *Test dataset split radio.
         Test data can be very big so that test with little test samples
-    :param batch_size:
-    :return:
+    :param batch_size: size(lenght) of batch
+    :return: tuple of splited into (*Train, *Validation, *Test)
     """
     num_files = len(audio_path_list)
     num_valid = int(np.ceil(num_files * valid_ratio))
@@ -186,9 +186,19 @@ def split_data(audio_path_list, valid_ratio, test_ratio, batch_size):
     return train_data, valid_data, test_data, train_size
 
 
+# TODO: replace with torchaudio
 # Adapted from https://github.com/caogang/wgan-gp/blob/master/gan_toy.py
-def calc_gradient_penalty(net_dis, real_data, fake_data, batch_size, lmbda, use_cuda=False):
-    # Compute interpolation factors
+def calc_gradient_penalty(netD, real_data, fake_data, batch_size, lmbda, use_cuda=False):
+    """
+    Compute interpolation factors for WGAN-GP loss
+    :param netD: Discriminator network
+    :param real_data: Data comes fomrm dataset
+    :param fake_data: Randomly generated fake data for discriminator
+    :param batch_size: size(lenght) of batch
+    :param lmbda: penalty coefficient
+    :param use_cuda: use cuda if you want.
+    :return: gradient penalty
+    """
     alpha = torch.rand(batch_size, 1, 1)
     alpha = alpha.expand(real_data.size())
     alpha = alpha.cuda() if use_cuda else alpha
@@ -201,7 +211,7 @@ def calc_gradient_penalty(net_dis, real_data, fake_data, batch_size, lmbda, use_
     interpolates.requires_grad = True
 
     # Evaluate discriminator
-    disc_interpolates = net_dis(interpolates)
+    disc_interpolates = netD(interpolates)
 
     # Obtain gradients of the discriminator with respect to the inputs
     gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
@@ -219,6 +229,9 @@ def calc_gradient_penalty(net_dis, real_data, fake_data, batch_size, lmbda, use_
 def numpy_to_var(numpy_data, cuda):
     """
     Convert numpy array to Variable.
+    :param numpy_data: data in numpy array.
+    :param cuda: use cuda if you want.
+    :return: non gradient require torch.tensor
     """
     data = numpy_data[:, np.newaxis, :]
     data = torch.Tensor(data)
@@ -228,8 +241,19 @@ def numpy_to_var(numpy_data, cuda):
     return data  # Variable(data, requires_grad=False)
 
 
+# TODO: Implement tensorboard visualization
 def plot_loss(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid,
-              G_cost, save_path):
+              G_cost, save_path) -> None:
+    """
+    Visualize Discriminator and Generator with respect to cost and Wasserstein(metric) loss using Matplotlib
+    :param D_cost_train: Discriminator train cost
+    :param D_wass_train: Discriminator train Wasserstein cost
+    :param D_cost_valid: Discriminator validation cost
+    :param D_wass_valid: Discriminator validation Wasserstein cost
+    :param G_cost: Generator cost
+    :param save_path: Image path. Save plot as image.
+    :return: None
+    """
     assert len(D_cost_train) == len(D_wass_train) == len(D_cost_valid) == len(D_wass_valid) == len(G_cost)
 
     save_path = os.path.join(save_path, "loss_curve.png")
@@ -261,6 +285,7 @@ def plot_loss(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid,
 def parse_arguments():
     """
     Get command line arguments
+    :return: command line arguments with argparse package
     """
     parser = argparse.ArgumentParser(description='Train a WaveGAN on a given set of audio')
 
