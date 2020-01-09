@@ -2,3 +2,9 @@ Saving configurations...
 Loading audio data...
 Starting training...EPOCHS=10, BATCH_SIZE=64, BATCH_NUM=295
 0m 0s Epoch: 1/10
+5m 5s Epoch=1 Batch: 59/295 D_c:-10.2619 | D_w:14.3410 | G:-1.0672
+9m 51s Epoch=1 Batch: 118/295 D_c:-6.3146 | D_w:8.9753 | G:-1.2258
+14m 38s Epoch=1 Batch: 177/295 D_c:-7.9488 | D_w:8.5061 | G:-1.0034
+19m 28s Epoch=1 Batch: 236/295 D_c:-8.5088 | D_w:10.8918 | G:-1.1538
+24m 17s Epoch=1 Batch: 295/295 D_c:-7.8318 | D_w:9.7818 | G:-1.3583
+24m 17s D_cost_train:-7.6713 | D_wass_train:9.8323 | D_cost_valid:-8.1602 | D_wass_valid:10.3714 | G_cost:-0.9468

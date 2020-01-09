@@ -345,7 +345,7 @@ class Parameters:
                             help='Size of latent dimension used by generator')
         parser.add_argument('-eps', '--epochs-per-sample', dest='epochs_per_sample', type=int, default=self.args['epochs_per_sample'],
                             help='How many epochs between every set of samples generated for inspection')
-        parser.add_argument('-ss', '--sample-size', dest='sample_size', type=int, default=SAMPLE_NUM,
+        parser.add_argument('-ss', '--sample-size', dest='sample_size', type=int, default=self.args['sample-size'],
                             help='Number of inspection samples generated')
         parser.add_argument('-rf', '--regularization-factor', dest='lmbda', type=float, default=self.args['lmbda'],
                             help='Gradient penalty regularization factor')

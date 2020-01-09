@@ -41,7 +41,7 @@ class WaveGAN:
                                                 datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
         arguments['model_dir'] = self.model_dir
         # save samples for every N epochs.
-        epochs_per_sample = arguments['epochs_per_sample']
+        self.epochs_per_sample = arguments['epochs_per_sample']
         # gradient penalty regularization factor.
         self.lmbda = arguments['lmbda']
 
@@ -253,9 +253,7 @@ class WaveGAN:
             if epoch % self.epochs_per_sample == 0:
                 self.LOGGER.info("Generating samples...")
                 sample_out = self.netG(self.sample_noise)  # sample_noise_Var
-                if cuda:
-                    sample_out = sample_out.cpu()
-                sample_out = sample_out.data.numpy()
+                sample_out = sample_out.cpu().data.numpy()
                 save_samples(sample_out, epoch, self.output_dir)
 
             # TODO: Early stopping by Inception Score(IS)
