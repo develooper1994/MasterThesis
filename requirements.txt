@@ -1,4 +1,9 @@
 numpy
+librosa
+pescador
+matplotlib
+
 torch
 torchvision
 tensorboard
+
