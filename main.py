@@ -1,8 +1,13 @@
+from Trainers.WaveGAN_Trainer import WaveGAN
+
+
 def main():
-    pass  # TODO
+    # TODO: Implement
+    gan = WaveGAN()  # default behaviour is train.
+    gan.train()
 
 
 if __name__ == "__main__":
-    print("Process Started")
+    print("Training Started")
     main()
-    print("Process Ended")
+    print("Training Ended")
