@@ -8,3 +8,152 @@ Starting training...EPOCHS=10, BATCH_SIZE=64, BATCH_NUM=295
 19m 28s Epoch=1 Batch: 236/295 D_c:-8.5088 | D_w:10.8918 | G:-1.1538
 24m 17s Epoch=1 Batch: 295/295 D_c:-7.8318 | D_w:9.7818 | G:-1.3583
 24m 17s D_cost_train:-7.6713 | D_wass_train:9.8323 | D_cost_valid:-8.1602 | D_wass_valid:10.3714 | G_cost:-0.9468
+Saving configurations...
+Loading audio data...
+Starting training...EPOCHS=10, BATCH_SIZE=64, BATCH_NUM=295
+0m 0s Epoch: 1/10
+5m 16s Epoch=1 Batch: 59/295 D_c:-7.7332 | D_w:8.9956 | G:-0.8388
+10m 26s Epoch=1 Batch: 118/295 D_c:-7.0095 | D_w:8.6453 | G:-0.7352
+15m 36s Epoch=1 Batch: 177/295 D_c:-8.2256 | D_w:9.0689 | G:-2.0477
+20m 45s Epoch=1 Batch: 236/295 D_c:-7.9786 | D_w:10.8616 | G:-0.8665
+25m 53s Epoch=1 Batch: 295/295 D_c:-6.5582 | D_w:8.4496 | G:-1.5947
+25m 53s D_cost_train:-7.6183 | D_wass_train:9.8473 | D_cost_valid:-8.0303 | D_wass_valid:10.2812 | G_cost:-1.1427
+Generating samples...
+25m 53s Epoch: 2/10
+30m 38s Epoch=2 Batch: 59/295 D_c:-8.4764 | D_w:11.3728 | G:-2.1982
+35m 23s Epoch=2 Batch: 118/295 D_c:-9.8515 | D_w:11.6231 | G:-2.1883
+40m 1s Epoch=2 Batch: 177/295 D_c:-7.9823 | D_w:10.7487 | G:-0.8058
+44m 39s Epoch=2 Batch: 236/295 D_c:-11.3743 | D_w:12.4688 | G:-1.1102
+49m 16s Epoch=2 Batch: 295/295 D_c:-6.4239 | D_w:8.6745 | G:-0.4862
+49m 16s D_cost_train:-8.1716 | D_wass_train:10.1298 | D_cost_valid:-8.4552 | D_wass_valid:10.4708 | G_cost:-1.2980
+Generating samples...
+49m 16s Epoch: 3/10
+53m 54s Epoch=3 Batch: 59/295 D_c:-9.8980 | D_w:12.1212 | G:-0.3130
+58m 32s Epoch=3 Batch: 118/295 D_c:-9.2744 | D_w:11.0199 | G:-0.5667
+63m 9s Epoch=3 Batch: 177/295 D_c:-6.1581 | D_w:10.4806 | G:-0.4513
+67m 47s Epoch=3 Batch: 236/295 D_c:-9.5473 | D_w:10.3796 | G:0.3059
+72m 24s Epoch=3 Batch: 295/295 D_c:-8.6292 | D_w:9.7297 | G:-1.4591
+72m 24s D_cost_train:-8.1702 | D_wass_train:9.9265 | D_cost_valid:-8.3444 | D_wass_valid:10.1328 | G_cost:-0.3869
+Generating samples...
+72m 24s Epoch: 4/10
+77m 1s Epoch=4 Batch: 59/295 D_c:-6.7437 | D_w:7.7025 | G:-0.8901
+81m 38s Epoch=4 Batch: 118/295 D_c:-7.8468 | D_w:8.5254 | G:-1.3917
+86m 15s Epoch=4 Batch: 177/295 D_c:-7.0454 | D_w:8.0699 | G:-0.6976
+90m 53s Epoch=4 Batch: 236/295 D_c:-7.0215 | D_w:8.6980 | G:-0.4679
+95m 30s Epoch=4 Batch: 295/295 D_c:-5.1755 | D_w:6.2254 | G:0.4683
+95m 30s D_cost_train:-7.1041 | D_wass_train:8.6202 | D_cost_valid:-7.3093 | D_wass_valid:8.8420 | G_cost:-0.4335
+Generating samples...
+95m 30s Epoch: 5/10
+100m 7s Epoch=5 Batch: 59/295 D_c:-7.7513 | D_w:8.6258 | G:-1.7498
+104m 45s Epoch=5 Batch: 118/295 D_c:-7.8999 | D_w:9.4437 | G:-0.5265
+109m 23s Epoch=5 Batch: 177/295 D_c:-8.3712 | D_w:9.8602 | G:-0.2766
+114m 2s Epoch=5 Batch: 236/295 D_c:-5.7225 | D_w:7.2203 | G:-1.6101
+118m 46s Epoch=5 Batch: 295/295 D_c:-6.7146 | D_w:8.0968 | G:-1.2433
+118m 46s D_cost_train:-6.7407 | D_wass_train:8.1115 | D_cost_valid:-6.9520 | D_wass_valid:8.3444 | G_cost:-0.3274
+Generating samples...
+118m 46s Epoch: 6/10
+123m 35s Epoch=6 Batch: 59/295 D_c:-7.1371 | D_w:7.8063 | G:-1.6928
+128m 27s Epoch=6 Batch: 118/295 D_c:-6.8808 | D_w:8.3819 | G:-1.3254
+133m 24s Epoch=6 Batch: 177/295 D_c:-5.3842 | D_w:6.2240 | G:-1.4237
+138m 33s Epoch=6 Batch: 236/295 D_c:-6.0858 | D_w:6.8487 | G:1.1634
+144m 1s Epoch=6 Batch: 295/295 D_c:-6.4990 | D_w:7.5481 | G:0.6148
+144m 1s D_cost_train:-5.9042 | D_wass_train:7.0118 | D_cost_valid:-6.0821 | D_wass_valid:7.2071 | G_cost:-0.3345
+Generating samples...
+144m 1s Epoch: 7/10
+149m 30s Epoch=7 Batch: 59/295 D_c:-4.8169 | D_w:5.5283 | G:1.3801
+155m 1s Epoch=7 Batch: 118/295 D_c:-5.7229 | D_w:6.5638 | G:-1.6830
+160m 36s Epoch=7 Batch: 177/295 D_c:-7.2110 | D_w:7.7266 | G:-1.7045
+166m 17s Epoch=7 Batch: 236/295 D_c:-3.5982 | D_w:4.2340 | G:1.4338
+171m 57s Epoch=7 Batch: 295/295 D_c:-5.7695 | D_w:6.0725 | G:-0.5358
+171m 57s D_cost_train:-5.2837 | D_wass_train:6.2150 | D_cost_valid:-5.4648 | D_wass_valid:6.4155 | G_cost:-0.3399
+Generating samples...
+171m 57s Epoch: 8/10
+177m 29s Epoch=8 Batch: 59/295 D_c:-4.8693 | D_w:5.2809 | G:1.1250
+183m 7s Epoch=8 Batch: 118/295 D_c:-4.5741 | D_w:5.5417 | G:-1.4354
+188m 48s Epoch=8 Batch: 177/295 D_c:-4.6635 | D_w:5.1406 | G:0.2742
+194m 16s Epoch=8 Batch: 236/295 D_c:-4.8311 | D_w:5.2365 | G:-1.6439
+199m 35s Epoch=8 Batch: 295/295 D_c:-4.6924 | D_w:5.0870 | G:1.9091
+199m 35s D_cost_train:-5.0033 | D_wass_train:5.8629 | D_cost_valid:-5.2621 | D_wass_valid:6.1475 | G_cost:-0.3258
+Generating samples...
+199m 35s Epoch: 9/10
+204m 57s Epoch=9 Batch: 59/295 D_c:-4.5265 | D_w:5.9216 | G:-0.9588
+210m 15s Epoch=9 Batch: 118/295 D_c:-3.9177 | D_w:4.2524 | G:-0.0914
+215m 36s Epoch=9 Batch: 177/295 D_c:-4.7888 | D_w:5.2691 | G:0.2720
+220m 56s Epoch=9 Batch: 236/295 D_c:-5.1168 | D_w:6.0393 | G:-0.3565
+226m 26s Epoch=9 Batch: 295/295 D_c:-4.1968 | D_w:4.5170 | G:-0.5103
+226m 26s D_cost_train:-4.7455 | D_wass_train:5.5137 | D_cost_valid:-4.9421 | D_wass_valid:5.7223 | G_cost:-0.5685
+Generating samples...
+226m 26s Epoch: 10/10
+231m 52s Epoch=10 Batch: 59/295 D_c:-4.5197 | D_w:5.5679 | G:0.0379
+236m 45s Epoch=10 Batch: 118/295 D_c:-3.7938 | D_w:4.7801 | G:-0.6881
+241m 36s Epoch=10 Batch: 177/295 D_c:-6.3608 | D_w:7.4731 | G:-2.2486
+246m 43s Epoch=10 Batch: 236/295 D_c:-3.9768 | D_w:4.2624 | G:-1.0004
+251m 44s Epoch=10 Batch: 295/295 D_c:-6.0244 | D_w:6.5802 | G:-2.4972
+251m 44s D_cost_train:-4.6544 | D_wass_train:5.3993 | D_cost_valid:-4.9252 | D_wass_valid:5.6895 | G_cost:-0.5087
+Generating samples...
+>>>>>>>Training finished !<<<<<<<
+Saving models...
+Saving loss curve...
+All finished!
+Saving configurations...
+Loading audio data...
+Saving configurations...
+Loading audio data...
+Starting training...EPOCHS=10, BATCH_SIZE=64, BATCH_NUM=295
+Saving configurations...
+Loading audio data...
+Starting training...EPOCHS=10, BATCH_SIZE=64, BATCH_NUM=295
+Saving configurations...
+Loading audio data...
+Starting training...EPOCHS=10, BATCH_SIZE=64, BATCH_NUM=295
+0m 0s Epoch: 1/10
+5m 8s Epoch=1 Batch: 59/295 D_c:-6.6606 | D_w:7.6229 | G:-1.2360
+Saving configurations...
+Loading audio data...
+Starting training...EPOCHS=10, BATCH_SIZE=128, BATCH_NUM=147
+0m 0s Epoch: 1/10
+Saving configurations...
+Loading audio data...
+Starting training...EPOCHS=10, BATCH_SIZE=96, BATCH_NUM=197
+0m 0s Epoch: 1/10
+Saving configurations...
+Loading audio data...
+Starting training...EPOCHS=10, BATCH_SIZE=80, BATCH_NUM=236
+0m 0s Epoch: 1/10
+4m 36s Epoch=1 Batch: 47/236 D_c:-9.8297 | D_w:11.8412 | G:-1.0603
+9m 8s Epoch=1 Batch: 94/236 D_c:-7.7069 | D_w:9.4277 | G:-0.7966
+13m 38s Epoch=1 Batch: 141/236 D_c:-10.1019 | D_w:11.8906 | G:-1.0913
+18m 8s Epoch=1 Batch: 188/236 D_c:-8.1843 | D_w:10.1666 | G:-2.2602
+22m 37s Epoch=1 Batch: 235/236 D_c:-7.9557 | D_w:11.3592 | G:-0.9185
+22m 43s D_cost_train:-7.5343 | D_wass_train:9.7085 | D_cost_valid:-7.8533 | D_wass_valid:10.0229 | G_cost:-1.4597
+Generating samples...
+22m 43s Epoch: 2/10
+27m 14s Epoch=2 Batch: 47/236 D_c:-8.6933 | D_w:9.7657 | G:-1.2546
+31m 53s Epoch=2 Batch: 94/236 D_c:-7.2716 | D_w:10.6538 | G:-1.5919
+36m 32s Epoch=2 Batch: 141/236 D_c:-8.7009 | D_w:9.7495 | G:-1.4145
+41m 9s Epoch=2 Batch: 188/236 D_c:-9.1310 | D_w:10.2433 | G:-0.7637
+45m 50s Epoch=2 Batch: 235/236 D_c:-8.6570 | D_w:9.5282 | G:-0.3297
+45m 56s D_cost_train:-8.0416 | D_wass_train:9.9298 | D_cost_valid:-8.1760 | D_wass_valid:10.0775 | G_cost:-1.1830
+Generating samples...
+45m 56s Epoch: 3/10
+50m 31s Epoch=3 Batch: 47/236 D_c:-8.4913 | D_w:10.7515 | G:0.1502
+55m 13s Epoch=3 Batch: 94/236 D_c:-8.8246 | D_w:9.6875 | G:0.0386
+60m 0s Epoch=3 Batch: 141/236 D_c:-9.2078 | D_w:11.3458 | G:-0.1299
+64m 52s Epoch=3 Batch: 188/236 D_c:-8.8715 | D_w:9.8380 | G:-0.2438
+69m 28s Epoch=3 Batch: 235/236 D_c:-8.3214 | D_w:9.1678 | G:0.1924
+69m 34s D_cost_train:-8.2116 | D_wass_train:9.9193 | D_cost_valid:-8.2554 | D_wass_valid:9.9741 | G_cost:-0.2100
+Generating samples...
+69m 34s Epoch: 4/10
+Saving configurations...
+Loading audio data...
+Starting training...EPOCHS=10, BATCH_SIZE=80, BATCH_NUM=236
+0m 0s Epoch: 1/10
+Saving configurations...
+Loading audio data...
+Starting training...EPOCHS=10, BATCH_SIZE=80, BATCH_NUM=236
+0m 0s Epoch: 1/10
+Saving configurations...
+Loading audio data...
+Starting training...EPOCHS=10, BATCH_SIZE=80, BATCH_NUM=236
+0m 0s Epoch: 1/10
+5m 11s Epoch=1 Batch: 47/236 D_c:-5.9973 | D_w:6.8235 | G:-0.8320

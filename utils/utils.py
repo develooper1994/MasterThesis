@@ -10,10 +10,12 @@ import argparse
 # pescador has no cuda and TorchJIT support
 import pescador  # https://github.com/pescadores/pescador
 import numpy as np
+
+from models.wavegan import WaveGANGenerator, WaveGANDiscriminator
 from utils.config import EPOCHS, BATCH_SIZE
 from utils.config import SAMPLE_EVERY, SAMPLE_NUM
 from utils.config import DATASET_NAME, OUTPUT_PATH
-from torch import autograd
+from torch import autograd, optim
 # from torch.autograd import Variable
 import matplotlib
 
@@ -132,6 +134,40 @@ def get_all_audio_filepaths(audio_dir):
             for fname in file_names
             if fname.lower().endswith('.wav') or fname.lower().endswith('.mp3')
             ]
+
+
+def parallel_models(device, *nets):
+    # netG = torch.nn.DataParallel(netG).to(device)
+    # netD = torch.nn.DataParallel(netD).to(device)
+    net = []
+    for n in nets:
+        n = torch.nn.DataParallel(n).to(device)
+        net.append(n)
+    return net
+
+
+def create_network(model_size, ngpus, latent_dim, device):
+    netG = WaveGANGenerator(model_size=model_size, ngpus=ngpus,
+                            latent_dim=latent_dim, upsample=True)
+    netD = WaveGANDiscriminator(model_size=model_size, ngpus=ngpus)
+
+    netG, netD = parallel_models(device, netG, netD)
+    return netG, netD
+
+
+def optimizers(netG, netD, arguments):
+    optimizerG = optim.Adam(netG.parameters(), lr=arguments['learning-rate'],
+                            betas=(arguments['beta-one'], arguments['beta-two']))
+    optimizerD = optim.Adam(netD.parameters(), lr=arguments['learning-rate'],
+                            betas=(arguments['beta-one'], arguments['beta-two']))
+    return optimizerG, optimizerD
+
+
+def sample_noise(arguments, latent_dim, device):
+    sample_noise = torch.randn(arguments['sample-size'], latent_dim)
+    sample_noise = sample_noise.to(device)
+    sample_noise.requires_grad = False  # sample_noise_Var = autograd.Variable(sample_noise, requires_grad=False)
+    return sample_noise
 
 
 # TODO: replace with torchaudio
@@ -324,11 +360,13 @@ class Parameters:
 
         parser.add_argument('-ms', '--model-size', dest='model_size', type=int, default=self.args['model_size'],
                             help='Model size parameter used in WaveGAN')
-        parser.add_argument('-pssf', '--phase-shuffle-shift-factor', dest='shift_factor', type=int, default=self.args['phase-shuffle-shift-factor'],
+        parser.add_argument('-pssf', '--phase-shuffle-shift-factor', dest='shift_factor', type=int,
+                            default=self.args['phase-shuffle-shift-factor'],
                             help='Maximum shift used by phase shuffle')
         parser.add_argument('-psb', '--phase-shuffle-batchwise', dest='batch_shuffle', action='store_true',
                             help='If true, apply phase shuffle to entire batches rather than individual samples')
-        parser.add_argument('-ppfl', '--post-proc-filt-len', dest='post_proc_filt_len', type=int, default=self.args['post-proc-filt-len'],
+        parser.add_argument('-ppfl', '--post-proc-filt-len', dest='post_proc_filt_len', type=int,
+                            default=self.args['post-proc-filt-len'],
                             help='Length of post processing filter used by generator. Set to 0 to disable.')
         parser.add_argument('-lra', '--lrelu-alpha', dest='alpha', type=float, default=self.args['lrelu-alpha'],
                             help='Slope of negative part of LReLU used by discriminator')
@@ -338,21 +376,26 @@ class Parameters:
                             help='Ratio of audio files used for testing')
         parser.add_argument('-bs', '--batch-size', dest='batch_size', type=int, default=self.args['batch_size'],
                             help='Batch size used for training')
-        parser.add_argument('-ne', '--num-epochs', dest='num_epochs', type=int, default=self.args['num_epochs'], help='Number of epochs')
+        parser.add_argument('-ne', '--num-epochs', dest='num_epochs', type=int, default=self.args['num_epochs'],
+                            help='Number of epochs')
         parser.add_argument('-ng', '--ngpus', dest='ngpus', type=int, default=self.args['ngpus'],
                             help='Number of GPUs to use for training')
         parser.add_argument('-ld', '--latent-dim', dest='latent_dim', type=int, default=self.args['latent_dim'],
                             help='Size of latent dimension used by generator')
-        parser.add_argument('-eps', '--epochs-per-sample', dest='epochs_per_sample', type=int, default=self.args['epochs_per_sample'],
+        parser.add_argument('-eps', '--epochs-per-sample', dest='epochs_per_sample', type=int,
+                            default=self.args['epochs_per_sample'],
                             help='How many epochs between every set of samples generated for inspection')
         parser.add_argument('-ss', '--sample-size', dest='sample_size', type=int, default=self.args['sample-size'],
                             help='Number of inspection samples generated')
         parser.add_argument('-rf', '--regularization-factor', dest='lmbda', type=float, default=self.args['lmbda'],
                             help='Gradient penalty regularization factor')
-        parser.add_argument('-lr', '--learning-rate', dest='learning_rate', type=float, default=self.args['learning-rate'],
+        parser.add_argument('-lr', '--learning-rate', dest='learning_rate', type=float,
+                            default=self.args['learning-rate'],
                             help='Initial ADAM learning rate')
-        parser.add_argument('-bo', '--beta-one', dest='beta1', type=float, default=self.args['beta-one'], help='beta_1 ADAM parameter')
-        parser.add_argument('-bt', '--beta-two', dest='beta2', type=float, default=self.args['beta-two'], help='beta_2 ADAM parameter')
+        parser.add_argument('-bo', '--beta-one', dest='beta1', type=float, default=self.args['beta-one'],
+                            help='beta_1 ADAM parameter')
+        parser.add_argument('-bt', '--beta-two', dest='beta2', type=float, default=self.args['beta-two'],
+                            help='beta_2 ADAM parameter')
         parser.add_argument('-v', '--verbose', dest='verbose', action='store_true')
         parser.add_argument('-audio_dir', '--audio_dir', dest='audio_dir', type=str, default=self.args['audio_dir'],
                             help='Path to directory containing audio files')
@@ -365,6 +408,29 @@ class Parameters:
             args = self.args
 
         return args
+
+    def set_params(self):
+        arguments = Parameters(False)
+        arguments = arguments.args
+        epochs = arguments['num_epochs']
+        batch_size = arguments['batch_size']
+        latent_dim = arguments['latent_dim']
+        ngpus = arguments['ngpus']
+        model_size = arguments['model_size']
+        model_dir = make_path(os.path.join(arguments['output_dir'],
+                                           datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+        arguments['model_dir'] = model_dir
+        # save samples for every N epochs.
+        epochs_per_sample = arguments['epochs_per_sample']
+        # gradient penalty regularization factor.
+        lmbda = arguments['lmbda']
+
+        # Dir
+        audio_dir = arguments['audio_dir']
+        output_dir = arguments['output_dir']
+
+        return epochs, batch_size, latent_dim, ngpus, model_size, model_dir, \
+               epochs_per_sample, lmbda, audio_dir, output_dir
 
     def __call__(self, *args, **kwargs):
         """

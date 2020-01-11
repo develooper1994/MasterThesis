@@ -2,7 +2,7 @@ from Trainers.WaveGAN_Trainer import WaveGAN
 
 
 def main():
-    # TODO: Implement
+    # TODO: Implement for all gan types
     gan = WaveGAN()  # default behaviour is train.
     gan.train()
 

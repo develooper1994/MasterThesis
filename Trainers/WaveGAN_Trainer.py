@@ -1,20 +1,24 @@
+# Standart library
 import os
 import time
+import datetime
+import pickle
+import json
 
+import pprint
+
+# torch imports
 import torch
 from torch import autograd
 from torch import optim
-import json
-from utils.utils import save_samples, Parameters, make_path, get_all_audio_filepaths, split_data, time_since, \
-    numpy_to_var, calc_gradient_penalty, plot_loss, Parameters, SAMPLE_NUM
 import numpy as np
-import pprint
-import pickle
-import datetime
+
+# my modules
 from models.wavegan import *
-# from wavegan import *
-from utils import *
+import utils.utils as utls
 from utils.logger import *
+from utils.utils import save_samples, Parameters, make_path, get_all_audio_filepaths, split_data, time_since, \
+    numpy_to_var, calc_gradient_penalty, plot_loss, Parameters, SAMPLE_NUM, parallel_models, create_network, optimizers
 
 cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda" if cuda else "cpu")
@@ -22,65 +26,37 @@ device = torch.device("cuda" if cuda else "cpu")
 
 class WaveGAN:
     def __init__(self):
-        # =============Logger===============
-        self.LOGGER = logging.getLogger('wavegan')
-        self.LOGGER.setLevel(logging.DEBUG)
-
-        self.LOGGER.info('Initialized logger.')
-        init_console_logger(self.LOGGER)
+        self.LOGGER = logger()
+        self.LOGGER.start()
 
         # =============Set Parameters===============
         arguments = Parameters(False)
+        self.epochs, self.batch_size, self.latent_dim, self.ngpus, self.model_size, self.model_dir, \
+        self.epochs_per_sample, self.lmbda, self.audio_dir, self.output_dir = arguments.set_params()
         arguments = arguments.args
-        self.epochs = arguments['num_epochs']
-        self.batch_size = arguments['batch_size']
-        self.latent_dim = arguments['latent_dim']
-        self.ngpus = arguments['ngpus']
-        self.model_size = arguments['model_size']
-        self.model_dir = make_path(os.path.join(arguments['output_dir'],
-                                                datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
-        arguments['model_dir'] = self.model_dir
-        # save samples for every N epochs.
-        self.epochs_per_sample = arguments['epochs_per_sample']
-        # gradient penalty regularization factor.
-        self.lmbda = arguments['lmbda']
 
-        # Dir
-        self.audio_dir = arguments['audio_dir']
-        self.output_dir = arguments['output_dir']
-
-        self.netG = WaveGANGenerator(model_size=self.model_size, ngpus=self.ngpus,
-                                     latent_dim=self.latent_dim, upsample=True)
-        self.netD = WaveGANDiscriminator(model_size=self.model_size, ngpus=self.ngpus)
-
-        self.netG = torch.nn.DataParallel(self.netG).to(device)
-        self.netD = torch.nn.DataParallel(self.netD).to(device)
+        self.netG, self.netD = utls.create_network(self.model_size, self.ngpus, self.latent_dim, device)
 
         # "Two time-scale update rule"(TTUR) to update netD 4x faster than netG.
-        self.optimizerG = optim.Adam(self.netG.parameters(), lr=arguments['learning-rate'],
-                                     betas=(arguments['beta-one'], arguments['beta-two']))
-        self.optimizerD = optim.Adam(self.netD.parameters(), lr=arguments['learning-rate'],
-                                     betas=(arguments['beta-one'], arguments['beta-two']))
+        self.optimizerG, self.optimizerD = utls.optimizers(self.netG, self.netD, arguments)
 
         # Sample noise used for generated output.
-        self.sample_noise = torch.randn(arguments['sample-size'], self.latent_dim)
-        self.sample_noise = self.sample_noise.to(device)
-        self.sample_noise.requires_grad = False  # sample_noise_Var = autograd.Variable(sample_noise, requires_grad=False)
+        self.sample_noise = utls.sample_noise(arguments, self.latent_dim, device)
 
         # Save config.
-        self.LOGGER.info('Saving configurations...')
+        self.LOGGER.save_configurations()
         config_path = os.path.join(self.model_dir, 'config.json')
         with open(config_path, 'w') as f:
             json.dump(arguments, f)
 
         # Load data.
-        self.LOGGER.info('Loading audio data...')
+        self.LOGGER.loading_data()
         audio_paths = get_all_audio_filepaths(self.audio_dir)
         train_data, valid_data, test_data, train_size = split_data(audio_paths, arguments['valid-ratio'],
                                                                    arguments['test-ratio'],
                                                                    self.batch_size)
-        self.TOTAL_TRAIN_SAMPLES = train_size
-        self.BATCH_NUM = self.TOTAL_TRAIN_SAMPLES // self.batch_size
+        TOTAL_TRAIN_SAMPLES = train_size
+        self.BATCH_NUM = TOTAL_TRAIN_SAMPLES // self.batch_size
 
         self.train_iter = iter(train_data)
         self.valid_iter = iter(valid_data)
@@ -96,10 +72,12 @@ class WaveGAN:
     def train(self):
         # =============Train===============
         start = time.time()
-        self.LOGGER.info('Starting training...EPOCHS={}, BATCH_SIZE={}, BATCH_NUM={}'.format(self.epochs, self.batch_size,
-                                                                                        self.BATCH_NUM))
+        # self.LOGGER.info('Starting training...EPOCHS={}, BATCH_SIZE={}, BATCH_NUM={}'.format(self.epochs, self.batch_size,
+        #                                                                                 self.BATCH_NUM))
+        self.LOGGER.start_training(self.epochs, self.batch_size, self.BATCH_NUM)
         for epoch in range(1, self.epochs + 1):
-            self.LOGGER.info("{} Epoch: {}/{}".format(time_since(start), epoch, self.epochs))
+            # self.LOGGER.info("{} Epoch: {}/{}".format(time_since(start), epoch, self.epochs))
+            self.LOGGER.epoch_info(start, epoch, self.epochs)
 
             D_cost_train_epoch = []
             D_wass_train_epoch = []
@@ -221,12 +199,13 @@ class WaveGAN:
                 G_cost_epoch.append(G_cost.data.numpy())
 
                 if i % (self.BATCH_NUM // 5) == 0:
-                    self.LOGGER.info(
-                        "{} Epoch={} Batch: {}/{} D_c:{:.4f} | D_w:{:.4f} | G:{:.4f}".format(time_since(start), epoch,
-                                                                                             i, self.BATCH_NUM,
-                                                                                             D_cost_train.data.numpy(),
-                                                                                             D_wass_train.data.numpy(),
-                                                                                             G_cost.data.numpy()))
+                    # self.LOGGER.info(
+                    #     "{} Epoch={} Batch: {}/{} D_c:{:.4f} | D_w:{:.4f} | G:{:.4f}".format(time_since(start), epoch,
+                    #                                                                          i, self.BATCH_NUM,
+                    #                                                                          D_cost_train.data.numpy(),
+                    #                                                                          D_wass_train.data.numpy(),
+                    #                                                                          G_cost.data.numpy()))
+                    self.LOGGER.batch_info(start, epoch, i, self.BATCH_NUM, D_cost_train, D_wass_train, G_cost)
 
             # Save the average cost of batches in every epoch.
             D_cost_train_epoch_avg = sum(D_cost_train_epoch) / float(len(D_cost_train_epoch))
@@ -239,41 +218,50 @@ class WaveGAN:
             self.D_wasses_train.append(D_wass_train_epoch_avg)
             self.D_costs_valid.append(D_cost_valid_epoch_avg)
             self.D_wasses_valid.append(D_wass_valid_epoch_avg)
-            self. G_costs.append(G_cost_epoch_avg)
+            self.G_costs.append(G_cost_epoch_avg)
 
-            self.LOGGER.info("{} D_cost_train:{:.4f} | D_wass_train:{:.4f} | D_cost_valid:{:.4f} | D_wass_valid:{:.4f} | "
-                        "G_cost:{:.4f}".format(time_since(start),
-                                               D_cost_train_epoch_avg,
-                                               D_wass_train_epoch_avg,
-                                               D_cost_valid_epoch_avg,
-                                               D_wass_valid_epoch_avg,
-                                               G_cost_epoch_avg))
+            # self.LOGGER.info("{} D_cost_train:{:.4f} | D_wass_train:{:.4f} | D_cost_valid:{:.4f} | D_wass_valid:{:.4f} | "
+            #             "G_cost:{:.4f}".format(time_since(start),
+            #                                    D_cost_train_epoch_avg,
+            #                                    D_wass_train_epoch_avg,
+            #                                    D_cost_valid_epoch_avg,
+            #                                    D_wass_valid_epoch_avg,
+            #                                    G_cost_epoch_avg))
+            self.LOGGER.batch_loss(start, D_cost_train_epoch_avg, D_wass_train_epoch_avg,
+                                   D_cost_valid_epoch_avg, D_wass_valid_epoch_avg, G_cost_epoch_avg)
 
             # Generate audio samples.
             if epoch % self.epochs_per_sample == 0:
-                self.LOGGER.info("Generating samples...")
+                # self.LOGGER.info("Generating samples...")
+                self.LOGGER.generating_samples()
+
                 sample_out = self.netG(self.sample_noise)  # sample_noise_Var
                 sample_out = sample_out.cpu().data.numpy()
                 save_samples(sample_out, epoch, self.output_dir)
 
             # TODO: Early stopping by Inception Score(IS)
 
-        self.LOGGER.info('>>>>>>>Training finished !<<<<<<<')
+        # self.LOGGER.info('>>>>>>>Training finished !<<<<<<<')
+        self.LOGGER.training_finished()
 
         # TODO: Implement check point and load from checkpoint
         # Save model
-        self.LOGGER.info("Saving models...")
+        # self.LOGGER.info("Saving models...")
+        self.LOGGER.save_model()
         netD_path = os.path.join(self.output_dir, "discriminator.pkl")
         netG_path = os.path.join(self.output_dir, "generator.pkl")
         torch.save(self.netD.state_dict(), netD_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
         torch.save(self.netG.state_dict(), netG_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
         # Plot loss curve.
-        self.LOGGER.info("Saving loss curve...")
+        # self.LOGGER.info("Saving loss curve...")
+        self.LOGGER.save_loss_curve()
+
         plot_loss(self.D_costs_train, self.D_wasses_train,
                   self.D_costs_valid, self.D_wasses_valid, self.G_costs, self.output_dir)
 
-        self.LOGGER.info("All finished!")
+        # self.LOGGER.info("All finished!")
+        self.LOGGER.end()
 
     # def __call__(self, *args, **kwargs):
     #     self.train()
