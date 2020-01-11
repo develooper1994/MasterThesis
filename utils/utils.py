@@ -230,7 +230,7 @@ def split_data(audio_path_list, valid_ratio, test_ratio, batch_size):
 def calc_gradient_penalty(netD, real_data, fake_data, batch_size, lmbda, device="cuda"):
     """
     Compute interpolation factors for WGAN-GP loss
-    :param netD: Discriminator network
+    :param netD: Discriminators network
     :param real_data: Data comes fomrm dataset
     :param fake_data: Randomly generated fake data for discriminator
     :param batch_size: size(lenght) of batch
@@ -286,11 +286,11 @@ def numpy_to_var(numpy_data, device):
 def plot_loss(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid,
               G_cost, save_path) -> None:
     """
-    Visualize Discriminator and Generator with respect to cost and Wasserstein(metric) loss using Matplotlib
-    :param D_cost_train: Discriminator train cost
-    :param D_wass_train: Discriminator train Wasserstein cost
-    :param D_cost_valid: Discriminator validation cost
-    :param D_wass_valid: Discriminator validation Wasserstein cost
+    Visualize Discriminators and Generator with respect to cost and Wasserstein(metric) loss using Matplotlib
+    :param D_cost_train: Discriminators train cost
+    :param D_wass_train: Discriminators train Wasserstein cost
+    :param D_cost_valid: Discriminators validation cost
+    :param D_wass_valid: Discriminators validation Wasserstein cost
     :param G_cost: Generator cost
     :param save_path: Image path. Save plot as image.
     :return: None

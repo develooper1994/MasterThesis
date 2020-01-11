@@ -58,16 +58,11 @@ class WaveGAN:
         TOTAL_TRAIN_SAMPLES = train_size
         self.BATCH_NUM = TOTAL_TRAIN_SAMPLES // self.batch_size
 
-        self.train_iter = iter(train_data)
-        self.valid_iter = iter(valid_data)
-        self.test_iter = iter(test_data)
+        self.train_iter, self.valid_iter, self.test_iter = iter(train_data), iter(valid_data), iter(test_data)
 
-        self.history = []
-        self.D_costs_train = []
-        self.D_wasses_train = []
-        self.D_costs_valid = []
-        self.D_wasses_valid = []
-        self.G_costs = []
+        self.history, self.G_costs = [], []
+        self.D_costs_train, self.D_wasses_train = [], []
+        self.D_costs_valid, self.D_wasses_valid = [], []
 
     def train(self):
         # =============Train===============
@@ -85,7 +80,7 @@ class WaveGAN:
             D_wass_valid_epoch = []
             G_cost_epoch = []
             for i in range(1, self.BATCH_NUM + 1):
-                # Set Discriminator parameters to require gradients.
+                # Set Discriminators parameters to require gradients.
                 for p in self.netD.parameters():
                     p.requires_grad = True
 
@@ -95,7 +90,7 @@ class WaveGAN:
                 neg_one = neg_one.to(device)
 
                 #############################
-                # (1) Train Discriminator
+                # (1) Train Discriminators
                 #############################
                 for iter_dis in range(5):
                     self.netD.zero_grad()

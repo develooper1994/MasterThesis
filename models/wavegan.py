@@ -220,12 +220,12 @@ class PhaseRemove(nn.Module):
 
 class WaveGANDiscriminator(nn.Module):
     """
-    WaveGAN Discriminator Network
+    WaveGAN Discriminators Network
     """
     def __init__(self, model_size=64, ngpus=1, num_in_channels=1, shift_factor=2,
                  alpha=0.2, verbose=False) -> None:
         """
-        Initialize WaveGAN Discriminator Network
+        Initialize WaveGAN Discriminators Network
         :param model_size: Size of model for flat input
 
             default=64
@@ -274,9 +274,9 @@ class WaveGANDiscriminator(nn.Module):
 
     def forward(self, x):
         """
-        Forward pass of Discriminator Netowkr
+        Forward pass of Discriminators Netowkr
         :param x: input from previous layer
-        :return: output of Discriminator Network
+        :return: output of Discriminators Network
         """
         # TODO: Experiment with BatchNorm1d Layer
         # Try to DCGAN first and than Parallel WaveGAN, Progressive Growing and EfficientNet approaches.
