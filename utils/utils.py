@@ -12,8 +12,11 @@ import argparse
 import pescador  # https://github.com/pescadores/pescador
 import numpy as np
 
-from models.wavegan import WaveGANGenerator, WaveGANDiscriminator
+
 from utils.WaveGAN_utils import *
+from utils.visualization.visualization import *
+
+# utils import
 from utils.config import EPOCHS, BATCH_SIZE
 from utils.config import SAMPLE_EVERY, SAMPLE_NUM
 from utils.config import DATASET_NAME, OUTPUT_PATH
@@ -251,45 +254,45 @@ def numpy_to_var(numpy_data, device):
     return data  # Variable(data, requires_grad=False)
 
 
-# TODO: Implement tensorboard visualization
-def plot_loss(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid,
-              G_cost, save_path) -> None:
-    """
-    Visualize Discriminators and Generator with respect to cost and Wasserstein(metric) loss using Matplotlib
-    :param D_cost_train: Discriminators train cost
-    :param D_wass_train: Discriminators train Wasserstein cost
-    :param D_cost_valid: Discriminators validation cost
-    :param D_wass_valid: Discriminators validation Wasserstein cost
-    :param G_cost: Generator cost
-    :param save_path: Image path. Save plot as image.
-    :return: None
-    """
-    assert len(D_cost_train) == len(D_wass_train) == len(D_cost_valid) == len(D_wass_valid) == len(G_cost)
-
-    save_path = os.path.join(save_path, "loss_curve.png")
-
-    x = range(len(D_cost_train))
-
-    y1 = D_cost_train
-    y2 = D_wass_train
-    y3 = D_cost_valid
-    y4 = D_wass_valid
-    y5 = G_cost
-
-    plt.plot(x, y1, label='D_loss_train')
-    plt.plot(x, y2, label='D_wass_train')
-    plt.plot(x, y3, label='D_loss_valid')
-    plt.plot(x, y4, label='D_wass_valid')
-    plt.plot(x, y5, label='G_loss')
-
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-
-    plt.legend(loc=4)
-    plt.grid(True)
-    plt.tight_layout()
-
-    plt.savefig(save_path)
+# # TODO: Implement tensorboard visualization
+# def plot_loss(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid,
+#               G_cost, save_path) -> None:
+#     """
+#     Visualize Discriminators and Generator with respect to cost and Wasserstein(metric) loss using Matplotlib
+#     :param D_cost_train: Discriminators train cost
+#     :param D_wass_train: Discriminators train Wasserstein cost
+#     :param D_cost_valid: Discriminators validation cost
+#     :param D_wass_valid: Discriminators validation Wasserstein cost
+#     :param G_cost: Generator cost
+#     :param save_path: Image path. Save plot as image.
+#     :return: None
+#     """
+#     assert len(D_cost_train) == len(D_wass_train) == len(D_cost_valid) == len(D_wass_valid) == len(G_cost)
+#
+#     save_path = os.path.join(save_path, "loss_curve.png")
+#
+#     x = range(len(D_cost_train))
+#
+#     y1 = D_cost_train
+#     y2 = D_wass_train
+#     y3 = D_cost_valid
+#     y4 = D_wass_valid
+#     y5 = G_cost
+#
+#     plt.plot(x, y1, label='D_loss_train')
+#     plt.plot(x, y2, label='D_wass_train')
+#     plt.plot(x, y3, label='D_loss_valid')
+#     plt.plot(x, y4, label='D_wass_valid')
+#     plt.plot(x, y5, label='G_loss')
+#
+#     plt.xlabel('Epoch')
+#     plt.ylabel('Loss')
+#
+#     plt.legend(loc=4)
+#     plt.grid(True)
+#     plt.tight_layout()
+#
+#     plt.savefig(save_path)
 
 
 class Parameters:
