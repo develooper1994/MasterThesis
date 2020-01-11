@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import datetime
@@ -12,6 +13,7 @@ import pescador  # https://github.com/pescadores/pescador
 import numpy as np
 
 from models.wavegan import WaveGANGenerator, WaveGANDiscriminator
+from utils.WaveGAN_utils import *
 from utils.config import EPOCHS, BATCH_SIZE
 from utils.config import SAMPLE_EVERY, SAMPLE_NUM
 from utils.config import DATASET_NAME, OUTPUT_PATH
@@ -56,6 +58,7 @@ def time_since(since):
     return '%dm %ds' % (m, s)
 
 
+# ============================================================
 def save_samples(epoch_samples, epoch, output_dir, fs=16000) -> None:
     """
     Save output samples for each iteration to examine progress
@@ -134,40 +137,6 @@ def get_all_audio_filepaths(audio_dir):
             for fname in file_names
             if fname.lower().endswith('.wav') or fname.lower().endswith('.mp3')
             ]
-
-
-def parallel_models(device, *nets):
-    # netG = torch.nn.DataParallel(netG).to(device)
-    # netD = torch.nn.DataParallel(netD).to(device)
-    net = []
-    for n in nets:
-        n = torch.nn.DataParallel(n).to(device)
-        net.append(n)
-    return net
-
-
-def create_network(model_size, ngpus, latent_dim, device):
-    netG = WaveGANGenerator(model_size=model_size, ngpus=ngpus,
-                            latent_dim=latent_dim, upsample=True)
-    netD = WaveGANDiscriminator(model_size=model_size, ngpus=ngpus)
-
-    netG, netD = parallel_models(device, netG, netD)
-    return netG, netD
-
-
-def optimizers(netG, netD, arguments):
-    optimizerG = optim.Adam(netG.parameters(), lr=arguments['learning-rate'],
-                            betas=(arguments['beta-one'], arguments['beta-two']))
-    optimizerD = optim.Adam(netD.parameters(), lr=arguments['learning-rate'],
-                            betas=(arguments['beta-one'], arguments['beta-two']))
-    return optimizerG, optimizerD
-
-
-def sample_noise(arguments, latent_dim, device):
-    sample_noise = torch.randn(arguments['sample-size'], latent_dim)
-    sample_noise = sample_noise.to(device)
-    sample_noise.requires_grad = False  # sample_noise_Var = autograd.Variable(sample_noise, requires_grad=False)
-    return sample_noise
 
 
 # TODO: replace with torchaudio

@@ -55,9 +55,9 @@ class logger:
         self.LOGGER.info(
             "{} Epoch={} Batch: {}/{} D_c:{:.4f} | D_w:{:.4f} | G:{:.4f}".format(time_since(start), epoch,
                                                                                  i, BATCH_NUM,
-                                                                                 D_cost_train.data.numpy(),
-                                                                                 D_wass_train.data.numpy(),
-                                                                                 G_cost.data.numpy()))
+                                                                                 D_cost_train.cpu().data.numpy(),
+                                                                                 D_wass_train.cpu().data.numpy(),
+                                                                                 G_cost.data.cpu().numpy()))
 
     def batch_loss(self, start, D_cost_train_epoch_avg, D_wass_train_epoch_avg,
                    D_cost_valid_epoch_avg, D_wass_valid_epoch_avg, G_cost_epoch_avg):

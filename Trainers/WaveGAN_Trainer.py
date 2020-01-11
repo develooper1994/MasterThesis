@@ -1,11 +1,7 @@
 # Standart library
 import os
 import time
-import datetime
 import pickle
-import json
-
-import pprint
 
 # torch imports
 import torch
@@ -18,7 +14,7 @@ from models.wavegan import *
 import utils.utils as utls
 from utils.logger import *
 from utils.utils import save_samples, Parameters, make_path, get_all_audio_filepaths, split_data, time_since, \
-    numpy_to_var, calc_gradient_penalty, plot_loss, Parameters, SAMPLE_NUM, parallel_models, create_network, optimizers
+    numpy_to_var, calc_gradient_penalty, plot_loss, Parameters
 
 cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda" if cuda else "cpu")
@@ -32,7 +28,7 @@ class WaveGAN:
         # =============Set Parameters===============
         arguments = Parameters(False)
         self.epochs, self.batch_size, self.latent_dim, self.ngpus, self.model_size, self.model_dir, \
-        self.epochs_per_sample, self.lmbda, self.audio_dir, self.output_dir = arguments.set_params()
+        self.epochs_per_sample, self.lmbda, audio_dir, self.output_dir = arguments.set_params()
         arguments = arguments.args
 
         self.netG, self.netD = utls.create_network(self.model_size, self.ngpus, self.latent_dim, device)
@@ -45,20 +41,12 @@ class WaveGAN:
 
         # Save config.
         self.LOGGER.save_configurations()
-        config_path = os.path.join(self.model_dir, 'config.json')
-        with open(config_path, 'w') as f:
-            json.dump(arguments, f)
+        utls.creat_dump(self.model_dir, arguments)
 
         # Load data.
         self.LOGGER.loading_data()
-        audio_paths = get_all_audio_filepaths(self.audio_dir)
-        train_data, valid_data, test_data, train_size = split_data(audio_paths, arguments['valid-ratio'],
-                                                                   arguments['test-ratio'],
-                                                                   self.batch_size)
-        TOTAL_TRAIN_SAMPLES = train_size
-        self.BATCH_NUM = TOTAL_TRAIN_SAMPLES // self.batch_size
-
-        self.train_iter, self.valid_iter, self.test_iter = iter(train_data), iter(valid_data), iter(test_data)
+        self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = utls.split_manage_data(audio_dir, arguments,
+                                                                                                  self.batch_size)
 
         self.history, self.G_costs = [], []
         self.D_costs_train, self.D_wasses_train = [], []
@@ -74,10 +62,8 @@ class WaveGAN:
             # self.LOGGER.info("{} Epoch: {}/{}".format(time_since(start), epoch, self.epochs))
             self.LOGGER.epoch_info(start, epoch, self.epochs)
 
-            D_cost_train_epoch = []
-            D_wass_train_epoch = []
-            D_cost_valid_epoch = []
-            D_wass_valid_epoch = []
+            D_cost_train_epoch, D_wass_train_epoch = [], []
+            D_cost_valid_epoch, D_wass_valid_epoch = [], []
             G_cost_epoch = []
             for i in range(1, self.BATCH_NUM + 1):
                 # Set Discriminators parameters to require gradients.
@@ -145,21 +131,11 @@ class WaveGAN:
                     gradient_penalty_valid = calc_gradient_penalty(self.netD, valid_data_Var.data,
                                                                    fake_valid.data, self.batch_size, self.lmbda,
                                                                    device=device)
-                    # Compute metrics and record in batch history.
-                    D_cost_valid = D_fake_valid - D_real_valid + gradient_penalty_valid
-                    D_wass_valid = D_real_valid - D_fake_valid
 
-                    if cuda:
-                        D_cost_train = D_cost_train.cpu()
-                        D_wass_train = D_wass_train.cpu()
-                        D_cost_valid = D_cost_valid.cpu()
-                        D_wass_valid = D_wass_valid.cpu()
-
-                    # Record costs
-                    D_cost_train_epoch.append(D_cost_train.data.numpy())
-                    D_wass_train_epoch.append(D_wass_train.data.numpy())
-                    D_cost_valid_epoch.append(D_cost_valid.data.numpy())
-                    D_wass_valid_epoch.append(D_wass_valid.data.numpy())
+                    utls.compute_and_record_batch_history(cuda, D_fake_valid, D_real_valid, D_cost_train, D_wass_train,
+                                                          gradient_penalty_valid,
+                                                          D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch,
+                                                          D_wass_valid_epoch)
 
                 #############################
                 # (3) Train Generator
@@ -173,8 +149,6 @@ class WaveGAN:
 
                 # Noise
                 noise = torch.Tensor(self.batch_size, self.latent_dim).uniform_(-1, 1)
-                # if cuda:
-                #     noise = noise.cuda()
                 noise = noise.to(device)
                 noise.requires_grad = False  # noise_Var = Variable(noise, requires_grad=False)
 
@@ -194,12 +168,6 @@ class WaveGAN:
                 G_cost_epoch.append(G_cost.data.numpy())
 
                 if i % (self.BATCH_NUM // 5) == 0:
-                    # self.LOGGER.info(
-                    #     "{} Epoch={} Batch: {}/{} D_c:{:.4f} | D_w:{:.4f} | G:{:.4f}".format(time_since(start), epoch,
-                    #                                                                          i, self.BATCH_NUM,
-                    #                                                                          D_cost_train.data.numpy(),
-                    #                                                                          D_wass_train.data.numpy(),
-                    #                                                                          G_cost.data.numpy()))
                     self.LOGGER.batch_info(start, epoch, i, self.BATCH_NUM, D_cost_train, D_wass_train, G_cost)
 
             # Save the average cost of batches in every epoch.
@@ -215,19 +183,11 @@ class WaveGAN:
             self.D_wasses_valid.append(D_wass_valid_epoch_avg)
             self.G_costs.append(G_cost_epoch_avg)
 
-            # self.LOGGER.info("{} D_cost_train:{:.4f} | D_wass_train:{:.4f} | D_cost_valid:{:.4f} | D_wass_valid:{:.4f} | "
-            #             "G_cost:{:.4f}".format(time_since(start),
-            #                                    D_cost_train_epoch_avg,
-            #                                    D_wass_train_epoch_avg,
-            #                                    D_cost_valid_epoch_avg,
-            #                                    D_wass_valid_epoch_avg,
-            #                                    G_cost_epoch_avg))
             self.LOGGER.batch_loss(start, D_cost_train_epoch_avg, D_wass_train_epoch_avg,
                                    D_cost_valid_epoch_avg, D_wass_valid_epoch_avg, G_cost_epoch_avg)
 
             # Generate audio samples.
             if epoch % self.epochs_per_sample == 0:
-                # self.LOGGER.info("Generating samples...")
                 self.LOGGER.generating_samples()
 
                 sample_out = self.netG(self.sample_noise)  # sample_noise_Var
@@ -236,12 +196,10 @@ class WaveGAN:
 
             # TODO: Early stopping by Inception Score(IS)
 
-        # self.LOGGER.info('>>>>>>>Training finished !<<<<<<<')
         self.LOGGER.training_finished()
 
         # TODO: Implement check point and load from checkpoint
         # Save model
-        # self.LOGGER.info("Saving models...")
         self.LOGGER.save_model()
         netD_path = os.path.join(self.output_dir, "discriminator.pkl")
         netG_path = os.path.join(self.output_dir, "generator.pkl")
@@ -249,13 +207,11 @@ class WaveGAN:
         torch.save(self.netG.state_dict(), netG_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
         # Plot loss curve.
-        # self.LOGGER.info("Saving loss curve...")
         self.LOGGER.save_loss_curve()
 
         plot_loss(self.D_costs_train, self.D_wasses_train,
                   self.D_costs_valid, self.D_wasses_valid, self.G_costs, self.output_dir)
 
-        # self.LOGGER.info("All finished!")
         self.LOGGER.end()
 
     # def __call__(self, *args, **kwargs):
