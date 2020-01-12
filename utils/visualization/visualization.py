@@ -11,6 +11,7 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
+
 # TODO: Implement tensorboard visualization
 def plot_loss(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid,
               G_cost, save_path) -> None:

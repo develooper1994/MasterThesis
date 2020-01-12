@@ -1,5 +1,6 @@
-import json
 import os
+import json
+import logging
 
 import torch
 from torch import optim
@@ -7,6 +8,12 @@ from torch import optim
 from models.wavegan import WaveGANGenerator, WaveGANDiscriminator
 
 # TODO: write document for each function.
+# from utils.utils import Logger
+
+# File Logger Configfuration
+LOGGER = logging.getLogger('wavegan')
+LOGGER.setLevel(logging.DEBUG)
+
 
 def parallel_models(device, *nets):
     net = []
@@ -69,7 +76,7 @@ def tocpu_all(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
     return D_cost_train, D_wass_train, D_cost_valid, D_wass_valid
 
 
-def tocuda_all(cpu, D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
+def tocuda_all(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
     D_cost_train = D_cost_train.cuda()
     D_wass_train = D_wass_train.cuda()
     D_cost_valid = D_cost_valid.cuda()
@@ -95,4 +102,34 @@ def compute_and_record_batch_history(D_fake_valid, D_real_valid, D_cost_train, D
 
     # Record costs
     record_costs(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch,
-                      D_cost_train, D_wass_train, D_cost_valid, D_wass_valid)  # .cpu()
+                 D_cost_train, D_wass_train, D_cost_valid, D_wass_valid)
+
+
+def save_avg_cost_one_epoch(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch,
+                            G_cost_epoch,
+                            D_costs_train, D_wasses_train, D_costs_valid, D_wasses_valid, G_costs, Logger, start):
+    # Save the average cost of batches in every epoch.
+    D_cost_train_epoch_avg = sum(D_cost_train_epoch) / float(len(D_cost_train_epoch))
+    D_wass_train_epoch_avg = sum(D_wass_train_epoch) / float(len(D_wass_train_epoch))
+    D_cost_valid_epoch_avg = sum(D_cost_valid_epoch) / float(len(D_cost_valid_epoch))
+    D_wass_valid_epoch_avg = sum(D_wass_valid_epoch) / float(len(D_wass_valid_epoch))
+    G_cost_epoch_avg = sum(G_cost_epoch) / float(len(G_cost_epoch))
+
+    D_costs_train.append(D_cost_train_epoch_avg)
+    D_wasses_train.append(D_wass_train_epoch_avg)
+    D_costs_valid.append(D_cost_valid_epoch_avg)
+    D_wasses_valid.append(D_wass_valid_epoch_avg)
+    G_costs.append(G_cost_epoch_avg)
+
+    Logger.batch_loss(start, D_cost_train_epoch_avg, D_wass_train_epoch_avg,
+                      D_cost_valid_epoch_avg, D_wass_valid_epoch_avg, G_cost_epoch_avg)
+
+
+def generate_audio_samples(Logger, netG, sample_noise, epoch, output_dir):
+    from utils.utils import save_samples
+
+    Logger.generating_samples()
+
+    sample_out = netG(sample_noise)  # sample_noise_Var
+    sample_out = sample_out.cpu().data.numpy()
+    save_samples(sample_out, epoch, output_dir)

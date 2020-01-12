@@ -14,7 +14,11 @@ from models.wavegan import *
 import utils.utils as utls
 from utils.logger import *
 from utils.utils import save_samples, Parameters, make_path, get_all_audio_filepaths, split_data, time_since, \
-    numpy_to_var, calc_gradient_penalty, plot_loss, Parameters
+    numpy_to_var, calc_gradient_penalty, plot_loss
+from utils.BasicUtils import Parameters
+
+# loss
+from losses.BaseLoss import wassertein_loss
 
 cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda" if cuda else "cpu")
@@ -22,8 +26,8 @@ device = torch.device("cuda" if cuda else "cpu")
 
 class WaveGAN:
     def __init__(self):
-        self.LOGGER = logger()
-        self.LOGGER.start()
+        self.Logger = logger()
+        self.Logger.start()
 
         # =============Set Parameters===============
         arguments = Parameters(False)
@@ -40,11 +44,11 @@ class WaveGAN:
         self.sample_noise = utls.sample_noise(arguments, self.latent_dim, device)
 
         # Save config.
-        self.LOGGER.save_configurations()
+        self.Logger.save_configurations()
         utls.creat_dump(self.model_dir, arguments)
 
         # Load data.
-        self.LOGGER.loading_data()
+        self.Logger.loading_data()
         self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = utls.split_manage_data(audio_dir, arguments,
                                                                                                   self.batch_size)
 
@@ -55,33 +59,35 @@ class WaveGAN:
     def train(self):
         # =============Train===============
         start = time.time()
-        # self.LOGGER.info('Starting training...EPOCHS={}, BATCH_SIZE={}, BATCH_NUM={}'.format(self.epochs, self.batch_size,
+        # self.Logger.info('Starting training...EPOCHS={}, BATCH_SIZE={}, BATCH_NUM={}'.format(self.epochs, self.batch_size,
         #                                                                                 self.BATCH_NUM))
-        self.LOGGER.start_training(self.epochs, self.batch_size, self.BATCH_NUM)
+        self.Logger.start_training(self.epochs, self.batch_size, self.BATCH_NUM)
         for epoch in range(1, self.epochs + 1):
-            # self.LOGGER.info("{} Epoch: {}/{}".format(time_since(start), epoch, self.epochs))
-            self.LOGGER.epoch_info(start, epoch, self.epochs)
+            # self.Logger.info("{} Epoch: {}/{}".format(time_since(start), epoch, self.epochs))
+            self.Logger.epoch_info(start, epoch, self.epochs)
 
             D_cost_train_epoch, D_wass_train_epoch = [], []
             D_cost_valid_epoch, D_wass_valid_epoch = [], []
             G_cost_epoch = []
             for i in range(1, self.BATCH_NUM + 1):
+                #############################
+                # (1) Train Discriminator
+                #############################
                 # Set Discriminators parameters to require gradients.
-                for p in self.netD.parameters():
-                    p.requires_grad = True
+                utls.require_net_update(self.netD)
 
                 one = torch.tensor(1, dtype=torch.float)
                 neg_one = torch.tensor(-1, dtype=torch.float)
                 one = one.to(device)
                 neg_one = neg_one.to(device)
 
-                for _ in range(5):
+                n_discriminate_train = 5
+                for _ in range(n_discriminate_train):  # train discriminator more than generator by (default)5
                     self.netD.zero_grad()
 
                     # Noise
                     noise = torch.Tensor(self.batch_size, self.latent_dim).uniform_(-1, 1)
                     noise = noise.to(device)
-
                     noise.requires_grad = False  # noise_Var = Variable(noise, requires_grad=False)
 
                     real_data_Var = numpy_to_var(next(self.train_iter)['X'], device)
@@ -104,8 +110,7 @@ class WaveGAN:
                     gradient_penalty.backward(one)
 
                     # Compute cost * Wassertein loss..
-                    D_cost_train = D_fake - D_real + gradient_penalty
-                    D_wass_train = D_real - D_fake
+                    D_cost_train, D_wass_train = wassertein_loss(D_fake, D_real, gradient_penalty)
 
                     # Update gradient of discriminator.
                     self.optimizerD.step()
@@ -113,103 +118,133 @@ class WaveGAN:
                     #############################
                     # (2) Compute Valid data
                     #############################
-                    self.netD.zero_grad()
 
-                    valid_data_Var = numpy_to_var(next(self.valid_iter)['X'], device)
-                    D_real_valid = self.netD(valid_data_Var)
-                    D_real_valid = D_real_valid.mean()  # avg loss
-
-                    # b) compute loss contribution from generated data, then backprop.
-                    fake_valid = self.netG(noise)  # noise_Var
-                    D_fake_valid = self.netD(fake_valid)
-                    D_fake_valid = D_fake_valid.mean()
-
-                    # c) compute gradient penalty and backprop
-                    gradient_penalty_valid = calc_gradient_penalty(self.netD, valid_data_Var.data,
-                                                                   fake_valid.data, self.batch_size, self.lmbda,
-                                                                   device=device)
-
-                    utls.compute_and_record_batch_history(D_fake_valid, D_real_valid, D_cost_train, D_wass_train,
-                                                          gradient_penalty_valid,
-                                                          D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch,
-                                                          D_wass_valid_epoch)
+                    D_cost_train, D_wass_train = self.compute_valid_data(noise, D_cost_train, D_wass_train,
+                                                                         D_cost_train_epoch, D_wass_train_epoch,
+                                                                         D_cost_valid_epoch, D_wass_valid_epoch)
 
                 #############################
                 # (3) Train Generator
                 #############################
                 # Prevent discriminator update.
-                for p in self.netD.parameters():
-                    p.requires_grad = False
-
-                # Reset generator gradients
-                self.netG.zero_grad()
-
-                # Noise
-                noise = torch.Tensor(self.batch_size, self.latent_dim).uniform_(-1, 1)
-                noise = noise.to(device)
-                noise.requires_grad = False  # noise_Var = Variable(noise, requires_grad=False)
-
-                fake = self.netG(noise)  # noise_Var
-                G = self.netD(fake)
-                G = G.mean()
-
-                # Update gradients.
-                G.backward(neg_one)
-                G_cost = -G
-
-                self.optimizerG.step()
-
-                # Record costs
-                if cuda:
-                    G_cost = G_cost.cpu()
-                G_cost_epoch.append(G_cost.data.numpy())
-
-                if i % (self.BATCH_NUM // 5) == 0:
-                    self.LOGGER.batch_info(start, epoch, i, self.BATCH_NUM, D_cost_train, D_wass_train, G_cost)
+                # utls.prevent_net_update(self.netD)
+                #
+                # # Reset generator gradients
+                # self.netG.zero_grad()
+                #
+                # # Noise
+                # noise = torch.Tensor(self.batch_size, self.latent_dim).uniform_(-1, 1)
+                # noise = noise.to(device)
+                # noise.requires_grad = False  # noise_Var = Variable(noise, requires_grad=False)
+                #
+                # fake = self.netG(noise)  # noise_Var
+                # G = self.netD(fake)
+                # G = G.mean()
+                #
+                # # Update gradients.
+                # G.backward(neg_one)
+                # G_cost = -G
+                #
+                # self.optimizerG.step()
+                #
+                # # Record costs
+                # if cuda:
+                #     G_cost = G_cost.cpu()
+                # G_cost_epoch.append(G_cost.data.numpy())
+                #
+                # if i % (self.BATCH_NUM // 5) == 0:
+                #     self.Logger.batch_info(start, epoch, i, self.BATCH_NUM, D_cost_train, D_wass_train, G_cost)
+                D_cost_train, D_wass_train = self.train_generator(neg_one, G_cost_epoch, start, epoch, i, D_cost_train, D_wass_train)
 
             # Save the average cost of batches in every epoch.
-            D_cost_train_epoch_avg = sum(D_cost_train_epoch) / float(len(D_cost_train_epoch))
-            D_wass_train_epoch_avg = sum(D_wass_train_epoch) / float(len(D_wass_train_epoch))
-            D_cost_valid_epoch_avg = sum(D_cost_valid_epoch) / float(len(D_cost_valid_epoch))
-            D_wass_valid_epoch_avg = sum(D_wass_valid_epoch) / float(len(D_wass_valid_epoch))
-            G_cost_epoch_avg = sum(G_cost_epoch) / float(len(G_cost_epoch))
-
-            self.D_costs_train.append(D_cost_train_epoch_avg)
-            self.D_wasses_train.append(D_wass_train_epoch_avg)
-            self.D_costs_valid.append(D_cost_valid_epoch_avg)
-            self.D_wasses_valid.append(D_wass_valid_epoch_avg)
-            self.G_costs.append(G_cost_epoch_avg)
-
-            self.LOGGER.batch_loss(start, D_cost_train_epoch_avg, D_wass_train_epoch_avg,
-                                   D_cost_valid_epoch_avg, D_wass_valid_epoch_avg, G_cost_epoch_avg)
+            utls.save_avg_cost_one_epoch(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch,
+                                         G_cost_epoch,
+                                         self.D_costs_train, self.D_wasses_train, self.D_costs_valid,
+                                         self.D_wasses_valid, self.G_costs, self.Logger, start)
 
             # Generate audio samples.
             if epoch % self.epochs_per_sample == 0:
-                self.LOGGER.generating_samples()
-
-                sample_out = self.netG(self.sample_noise)  # sample_noise_Var
-                sample_out = sample_out.cpu().data.numpy()
-                save_samples(sample_out, epoch, self.output_dir)
+                # self.Logger.generating_samples()
+                #
+                # sample_out = self.netG(self.sample_noise)  # sample_noise_Var
+                # sample_out = sample_out.cpu().data.numpy()
+                # save_samples(sample_out, epoch, self.output_dir)
+                utls.generate_audio_samples(self.Logger, self.netG, self.sample_noise, epoch, self.output_dir)
 
                 # TODO: Early stopping by Inception Score(IS)
 
-        self.LOGGER.training_finished()
+        self.Logger.training_finished()
 
         # TODO: Implement check point and load from checkpoint
         # Save model
-        self.LOGGER.save_model()
+        self.Logger.save_model()
         netD_path = os.path.join(self.output_dir, "discriminator.pkl")
         netG_path = os.path.join(self.output_dir, "generator.pkl")
         torch.save(self.netD.state_dict(), netD_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
         torch.save(self.netG.state_dict(), netG_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
         # Plot loss curve.
-        self.LOGGER.save_loss_curve()
+        self.Logger.save_loss_curve()
 
         plot_loss(self.D_costs_train, self.D_wasses_train,
                   self.D_costs_valid, self.D_wasses_valid, self.G_costs, self.output_dir)
 
-        self.LOGGER.end()
+        self.Logger.end()
+
+    def compute_valid_data(self, noise, D_cost_train, D_wass_train,
+                           D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch):
+        self.netD.zero_grad()
+
+        valid_data_Var = numpy_to_var(next(self.valid_iter)['X'], device)
+        D_real_valid = self.netD(valid_data_Var)
+        D_real_valid = D_real_valid.mean()  # avg loss
+
+        # b) compute loss contribution from generated data, then backprop.
+        fake_valid = self.netG(noise)  # noise_Var
+        D_fake_valid = self.netD(fake_valid)
+        D_fake_valid = D_fake_valid.mean()
+
+        # c) compute gradient penalty and backprop
+        gradient_penalty_valid = calc_gradient_penalty(self.netD, valid_data_Var.data,
+                                                       fake_valid.data, self.batch_size, self.lmbda,
+                                                       device=device)
+
+        utls.compute_and_record_batch_history(D_fake_valid, D_real_valid, D_cost_train, D_wass_train,
+                                              gradient_penalty_valid,
+                                              D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch,
+                                              D_wass_valid_epoch)
+        return D_cost_train, D_wass_train
+
+    def train_generator(self, neg_one, G_cost_epoch, start, epoch, i, D_cost_train, D_wass_train):
+        utls.prevent_net_update(self.netD)
+
+        # Reset generator gradients
+        self.netG.zero_grad()
+
+        # Noise
+        noise = torch.Tensor(self.batch_size, self.latent_dim).uniform_(-1, 1)
+        noise = noise.to(device)
+        noise.requires_grad = False  # noise_Var = Variable(noise, requires_grad=False)
+
+        fake = self.netG(noise)  # noise_Var
+        G = self.netD(fake)
+        G = G.mean()
+
+        # Update gradients.
+        G.backward(neg_one)
+        G_cost = -G
+
+        self.optimizerG.step()
+
+        # Record costs
+        if cuda:
+            G_cost = G_cost.cpu()
+        G_cost_epoch.append(G_cost.data.numpy())
+
+        if i % (self.BATCH_NUM // 5) == 0:
+            self.Logger.batch_info(start, epoch, i, self.BATCH_NUM, D_cost_train, D_wass_train, G_cost)
+
+        return D_cost_train, D_wass_train
 
     # def __call__(self, *args, **kwargs):
     #     self.train()
