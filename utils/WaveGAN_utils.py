@@ -61,7 +61,7 @@ def split_manage_data(audio_dir, arguments, batch_size):
     return BATCH_NUM, train_iter, valid_iter, test_iter
 
 
-def tocpu_all(cuda, D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
+def tocpu_all(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
     D_cost_train = D_cost_train.cpu()
     D_wass_train = D_wass_train.cpu()
     D_cost_valid = D_cost_valid.cpu()
@@ -85,13 +85,13 @@ def record_costs(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_w
     D_wass_valid_epoch.append(D_wass_valid.data.numpy())
 
 
-def compute_and_record_batch_history(cuda, D_fake_valid, D_real_valid, D_cost_train, D_wass_train, gradient_penalty_valid,
+def compute_and_record_batch_history(D_fake_valid, D_real_valid, D_cost_train, D_wass_train, gradient_penalty_valid,
                                      D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch):
     D_cost_valid = D_fake_valid - D_real_valid + gradient_penalty_valid
     D_wass_valid = D_real_valid - D_fake_valid
 
     D_cost_train, D_wass_train, D_cost_valid, D_wass_valid = \
-        tocpu_all(cuda, D_cost_train, D_wass_train, D_cost_valid, D_wass_valid)
+        tocpu_all(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid)
 
     # Record costs
     record_costs(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch,

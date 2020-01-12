@@ -1,31 +1,25 @@
-import json
-import os
-import time
-import datetime
-import math
-import torch
-import random
-import logging
-import librosa
 import argparse
+import datetime
+import logging
+import math
+import random
+import time
+
+import librosa
+# from torch.autograd import Variable
+import numpy as np
 # pescador has no cuda and TorchJIT support
 import pescador  # https://github.com/pescadores/pescador
-import numpy as np
-
+from torch import autograd
 
 from utils.WaveGAN_utils import *
-from utils.visualization.visualization import *
-
+from utils.config import DATASET_NAME, OUTPUT_PATH
 # utils import
 from utils.config import EPOCHS, BATCH_SIZE
 from utils.config import SAMPLE_EVERY, SAMPLE_NUM
-from utils.config import DATASET_NAME, OUTPUT_PATH
-from torch import autograd, optim
-# from torch.autograd import Variable
-import matplotlib
+from utils.visualization.visualization import *
 
 matplotlib.use('agg')
-import matplotlib.pyplot as plt
 
 # File Logger Configfuration
 LOGGER = logging.getLogger('wavegan')

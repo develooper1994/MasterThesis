@@ -75,10 +75,7 @@ class WaveGAN:
                 one = one.to(device)
                 neg_one = neg_one.to(device)
 
-                #############################
-                # (1) Train Discriminators
-                #############################
-                for iter_dis in range(5):
+                for _ in range(5):
                     self.netD.zero_grad()
 
                     # Noise
@@ -132,7 +129,7 @@ class WaveGAN:
                                                                    fake_valid.data, self.batch_size, self.lmbda,
                                                                    device=device)
 
-                    utls.compute_and_record_batch_history(cuda, D_fake_valid, D_real_valid, D_cost_train, D_wass_train,
+                    utls.compute_and_record_batch_history(D_fake_valid, D_real_valid, D_cost_train, D_wass_train,
                                                           gradient_penalty_valid,
                                                           D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch,
                                                           D_wass_valid_epoch)
@@ -194,7 +191,7 @@ class WaveGAN:
                 sample_out = sample_out.cpu().data.numpy()
                 save_samples(sample_out, epoch, self.output_dir)
 
-            # TODO: Early stopping by Inception Score(IS)
+                # TODO: Early stopping by Inception Score(IS)
 
         self.LOGGER.training_finished()
 
