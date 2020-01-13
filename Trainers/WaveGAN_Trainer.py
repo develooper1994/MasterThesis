@@ -2,8 +2,9 @@
 import pickle
 
 # loss
-from losses.BaseLoss import wassertein_loss
+from models.losses.BaseLoss import wassertein_loss
 # my modules
+import utils.BasicUtils as utls_basic
 from utils.WaveGAN_utils import save_avg_cost_one_epoch, creat_dump, generate_audio_samples, \
     compute_and_record_batch_history, create_network, sample_noise, split_manage_data, optimizers
 from utils.logger import *
@@ -79,37 +80,7 @@ class WaveGAN:
                     #############################
                     # (1.1) Train Discriminator 1 times
                     #############################
-                    self.netD.zero_grad()
-
-                    # Noise
-                    noise = torch.Tensor(self.batch_size, self.latent_dim).uniform_(-1, 1)
-                    noise = noise.to(device)
-                    noise.requires_grad = False  # noise_Var = Variable(noise, requires_grad=False)
-
-                    real_data_Var = numpy_to_var(next(self.train_iter)['X'], device)
-
-                    # a) compute loss contribution from real training data
-                    D_real = self.netD(real_data_Var)
-                    D_real = D_real.mean()  # avg loss
-                    D_real.backward(neg_one)  # loss * -1
-
-                    # b) compute loss contribution from generated data, then backprop.
-                    fake = autograd.Variable(self.netG(noise).data)  # noise_Var
-                    D_fake = self.netD(fake)
-                    D_fake = D_fake.mean()
-                    D_fake.backward(one)
-
-                    # c) compute gradient penalty and backprop
-                    gradient_penalty = calc_gradient_penalty(self.netD, real_data_Var.data,
-                                                             fake.data, self.batch_size, self.lmbda,
-                                                             device=device)
-                    gradient_penalty.backward(one)
-
-                    # Compute cost * Wassertein loss..
-                    self.D_cost_train, self.D_wass_train = wassertein_loss(D_fake, D_real, gradient_penalty)
-
-                    # Update gradient of discriminator.
-                    self.optimizerD.step()
+                    noise = self.train_discriminator_once(neg_one, one)
 
                     #############################
                     # (2) Compute Valid data
@@ -141,18 +112,25 @@ class WaveGAN:
         # TODO: Implement check point and load from checkpoint
         # Save model
         self.Logger.save_model()
-        netD_path = os.path.join(self.output_dir, "discriminator.pkl")
-        netG_path = os.path.join(self.output_dir, "generator.pkl")
-        torch.save(self.netD.state_dict(), netD_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
-        torch.save(self.netG.state_dict(), netG_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
-
-        # Plot loss curve.
-        self.Logger.save_loss_curve()
-
-        plot_loss(self.D_costs_train, self.D_wasses_train,
-                  self.D_costs_valid, self.D_wasses_valid, self.G_costs, self.output_dir)
+        # netD_path = os.path.join(self.output_dir, "discriminator.pkl")
+        # netG_path = os.path.join(self.output_dir, "generator.pkl")
+        # torch.save(self.netD.state_dict(), netD_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
+        # torch.save(self.netG.state_dict(), netG_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
+        self.last_torch()
 
         self.Logger.end()
+
+    def last_torch(self) -> None:
+        """
+        Last process to end up training. Do it what do you want. Visualization, early stopping, checkpoint of models,
+        calculate metrics, ...
+        :return: None
+        """
+        utls_basic.save_models(self.output_dir, self.netD, self.netG)
+        self.Logger.save_loss_curve()
+        # Plot loss curve.
+        plot_loss(self.D_costs_train, self.D_wasses_train,
+                  self.D_costs_valid, self.D_wasses_valid, self.G_costs, self.output_dir)
 
     def compute_valid_data(self, noise, D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch):
         self.netD.zero_grad()
@@ -175,6 +153,33 @@ class WaveGAN:
                                          gradient_penalty_valid,
                                          D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch,
                                          D_wass_valid_epoch)
+
+    def train_discriminator_once(self, neg_one, one):
+        self.netD.zero_grad()
+        # Noise
+        noise = torch.Tensor(self.batch_size, self.latent_dim).uniform_(-1, 1)
+        noise = noise.to(device)
+        noise.requires_grad = False  # noise_Var = Variable(noise, requires_grad=False)
+        real_data_Var = numpy_to_var(next(self.train_iter)['X'], device)
+        # a) compute loss contribution from real training data
+        D_real = self.netD(real_data_Var)
+        D_real = D_real.mean()  # avg loss
+        D_real.backward(neg_one)  # loss * -1
+        # b) compute loss contribution from generated data, then backprop.
+        fake = autograd.Variable(self.netG(noise).data)  # noise_Var
+        D_fake = self.netD(fake)
+        D_fake = D_fake.mean()
+        D_fake.backward(one)
+        # c) compute gradient penalty and backprop
+        gradient_penalty = calc_gradient_penalty(self.netD, real_data_Var.data,
+                                                 fake.data, self.batch_size, self.lmbda,
+                                                 device=device)
+        gradient_penalty.backward(one)
+        # Compute cost * Wassertein loss..
+        self.D_cost_train, self.D_wass_train = wassertein_loss(D_fake, D_real, gradient_penalty)
+        # Update gradient of discriminator.
+        self.optimizerD.step()
+        return noise
 
     def train_generator(self, neg_one, G_cost_epoch, start, epoch, i):
         prevent_net_update(self.netD)

@@ -3,6 +3,7 @@ import argparse
 import datetime
 import math
 import os
+import pickle
 import time
 
 import numpy as np
@@ -229,6 +230,12 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, lmbda, device=
     gradient_penalty = lmbda * ((gradients.norm(2, dim=1) - 1) ** 2).mean()
     return gradient_penalty
 
+
+def save_models(output_dir, netD, netG):
+    netD_path = os.path.join(output_dir, "discriminator.pkl")
+    netG_path = os.path.join(output_dir, "generator.pkl")
+    torch.save(netD.state_dict(), netD_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
+    torch.save(netG.state_dict(), netG_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
 class GANUtils:
     pass

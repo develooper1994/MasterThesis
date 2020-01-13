@@ -7,6 +7,7 @@ from torch import optim
 
 from models.Discriminators.WaveGAN_Discriminator import WaveGANDiscriminator
 from models.Generators.WaveGAN_Generator import WaveGANGenerator
+from models.losses.BaseLoss import wassertein_loss
 
 # TODO: write document for each function.
 # from utils.utils import Logger
@@ -97,7 +98,6 @@ def compute_and_record_batch_history(D_fake_valid, D_real_valid, D_cost_train, D
                                      D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch):
 
     # validation loss
-    from losses.BaseLoss import wassertein_loss
     # D_cost_valid = D_fake_valid - D_real_valid + gradient_penalty_valid
     # D_wass_valid = D_real_valid - D_fake_valid
     D_cost_valid, D_wass_valid = wassertein_loss(D_fake_valid, D_real_valid, gradient_penalty_valid)
@@ -138,3 +138,5 @@ def generate_audio_samples(Logger, netG, sample_noise, epoch, output_dir):
     sample_out = netG(sample_noise)  # sample_noise_Var
     sample_out = sample_out.cpu().data.numpy()
     save_samples(sample_out, epoch, output_dir)
+
+
