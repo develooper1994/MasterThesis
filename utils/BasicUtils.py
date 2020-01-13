@@ -1,16 +1,17 @@
 # standart library
 import argparse
 import datetime
+import math
 import os
 import time
-import math
 
-#3'rd party
-import torch
 import numpy as np
-
+# 3'rd party
+import torch
 # my libraries
-from utils.config import DATASET_NAME, OUTPUT_PATH, EPOCHS, BATCH_SIZE, SAMPLE_EVERY, SAMPLE_NUM
+from torch import autograd
+
+from config import DATASET_NAME, OUTPUT_PATH, EPOCHS, BATCH_SIZE, SAMPLE_EVERY, SAMPLE_NUM
 
 
 def make_path(output_path):
@@ -186,3 +187,54 @@ class Parameters:
 
     def __repr__(self):
         return str(self.args)
+
+
+# TODO: replace with torchaudio
+# Adapted from https://github.com/caogang/wgan-gp/blob/master/gan_toy.py
+def calc_gradient_penalty(netD, real_data, fake_data, batch_size, lmbda, device="cuda"):
+    """
+    Compute interpolation factors for WGAN-GP loss
+    :param netD: Discriminators network
+    :param real_data: Data comes fomrm dataset
+    :param fake_data: Randomly generated fake data for discriminator
+    :param batch_size: size(lenght) of batch
+    :param lmbda: penalty coefficient
+    :param device: use cuda if you want.
+    :return: gradient penalty
+    """
+    alpha = torch.rand(batch_size, 1, 1)
+    alpha = alpha.expand(real_data.size())
+    alpha = alpha.to(device)  # if device else alpha
+
+    # Interpolate between real and fake data.
+    interpolates = alpha * real_data + (1 - alpha) * fake_data
+    # if device:
+    #     interpolates = interpolates.cuda()
+    interpolates = interpolates.to(device)
+    # interpolates = autograd.Variable(interpolates, requires_grad=True)
+    interpolates.requires_grad = True
+
+    # Evaluate discriminator
+    disc_interpolates = netD(interpolates)
+
+    # Obtain gradients of the discriminator with respect to the inputs
+    gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
+                              grad_outputs=torch.ones(disc_interpolates.size()).cuda() if device else
+                              torch.ones(disc_interpolates.size()),
+                              create_graph=True, retain_graph=True, only_inputs=True)[0]
+    gradients = gradients.view(gradients.size(0), -1)
+
+    # Compute MSE between 1.0 and the gradient of the norm penalty to make discriminator
+    # to be a 1-Lipschitz function.
+    gradient_penalty = lmbda * ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+    return gradient_penalty
+
+
+class GANUtils:
+    pass
+
+
+# def create_network(model_size, ngpus, latent_dim, device):
+#     netG = WaveGANGenerator(model_size=model_size, ngpus=ngpus, latent_dim=latent_dim, upsample=True)
+#     netD = WaveGANDiscriminator(model_size=model_size, ngpus=ngpus)
+#     return netG, netD

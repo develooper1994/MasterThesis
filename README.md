@@ -4,9 +4,9 @@
 PyTorch implementation of [!TODO: link]()
 
 Before running, make sure you have the `sc09` dataset, and put that dataset into 
-utils/config.py DATASET_NAME variable with full path and filename
+config.py DATASET_NAME variable with full path and filename
 
-If you want to output different directory, change utils/config.py OUTPUT_PATH variable with full path and filename
+If you want to output different directory, change config.py OUTPUT_PATH variable with full path and filename
 
 ## Quick Start:
 1.Installation

@@ -5,7 +5,8 @@ import logging
 import torch
 from torch import optim
 
-from models.wavegan import WaveGANGenerator, WaveGANDiscriminator
+from models.Discriminators.WaveGAN_Discriminator import WaveGANDiscriminator
+from models.Generators.WaveGAN_Generator import WaveGANGenerator
 
 # TODO: write document for each function.
 # from utils.utils import Logger
@@ -54,9 +55,9 @@ def creat_dump(model_dir, arguments):
 
 
 def split_manage_data(audio_dir, arguments, batch_size):
-    from utils.utils import get_all_audio_filepaths
+    from models.custom_DataLoader.custom_DataLoader import get_all_audio_filepaths
     audio_paths = get_all_audio_filepaths(audio_dir)
-    from utils.utils import split_data
+    from models.custom_DataLoader.custom_DataLoader import split_data
     train_data, valid_data, test_data, train_size = split_data(audio_paths, arguments['valid-ratio'],
                                                                arguments['test-ratio'],
                                                                batch_size)
@@ -68,19 +69,19 @@ def split_manage_data(audio_dir, arguments, batch_size):
     return BATCH_NUM, train_iter, valid_iter, test_iter
 
 
-def tocpu_all(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
-    D_cost_train = D_cost_train.cpu()
-    D_wass_train = D_wass_train.cpu()
-    D_cost_valid = D_cost_valid.cpu()
-    D_wass_valid = D_wass_valid.cpu()
-    return D_cost_train, D_wass_train, D_cost_valid, D_wass_valid
-
-
 def tocuda_all(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
     D_cost_train = D_cost_train.cuda()
     D_wass_train = D_wass_train.cuda()
     D_cost_valid = D_cost_valid.cuda()
     D_wass_valid = D_wass_valid.cuda()
+    return D_cost_train, D_wass_train, D_cost_valid, D_wass_valid
+
+
+def tocpu_all(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
+    D_cost_train = D_cost_train.cpu()
+    D_wass_train = D_wass_train.cpu()
+    D_cost_valid = D_cost_valid.cpu()
+    D_wass_valid = D_wass_valid.cpu()
     return D_cost_train, D_wass_train, D_cost_valid, D_wass_valid
 
 
@@ -94,8 +95,12 @@ def record_costs(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_w
 
 def compute_and_record_batch_history(D_fake_valid, D_real_valid, D_cost_train, D_wass_train, gradient_penalty_valid,
                                      D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch):
-    D_cost_valid = D_fake_valid - D_real_valid + gradient_penalty_valid
-    D_wass_valid = D_real_valid - D_fake_valid
+
+    # validation loss
+    from losses.BaseLoss import wassertein_loss
+    # D_cost_valid = D_fake_valid - D_real_valid + gradient_penalty_valid
+    # D_wass_valid = D_real_valid - D_fake_valid
+    D_cost_valid, D_wass_valid = wassertein_loss(D_fake_valid, D_real_valid, gradient_penalty_valid)
 
     D_cost_train, D_wass_train, D_cost_valid, D_wass_valid = \
         tocpu_all(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid)
@@ -126,7 +131,7 @@ def save_avg_cost_one_epoch(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid
 
 
 def generate_audio_samples(Logger, netG, sample_noise, epoch, output_dir):
-    from utils.utils import save_samples
+    from models.custom_DataLoader.custom_DataLoader import save_samples
 
     Logger.generating_samples()
 

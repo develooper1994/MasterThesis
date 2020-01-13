@@ -1,24 +1,15 @@
 # Standart library
-import os
-import time
 import pickle
-
-# torch imports
-import torch
-from torch import autograd
-from torch import optim
-import numpy as np
-
-# my modules
-from models.wavegan import *
-import utils.utils as utls
-from utils.logger import *
-from utils.utils import save_samples, Parameters, make_path, get_all_audio_filepaths, split_data, time_since, \
-    numpy_to_var, calc_gradient_penalty, plot_loss
-from utils.BasicUtils import Parameters
 
 # loss
 from losses.BaseLoss import wassertein_loss
+# my modules
+from utils.WaveGAN_utils import save_avg_cost_one_epoch, creat_dump, generate_audio_samples, \
+    compute_and_record_batch_history, create_network, sample_noise, split_manage_data, optimizers
+from utils.logger import *
+from utils.visualization.visualization import plot_loss
+
+# torch imports
 
 cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda" if cuda else "cpu")
@@ -35,22 +26,24 @@ class WaveGAN:
         self.epochs_per_sample, self.lmbda, audio_dir, self.output_dir = arguments.set_params()
         arguments = arguments.args
 
-        self.netG, self.netD = utls.create_network(self.model_size, self.ngpus, self.latent_dim, device)
+        self.netG, self.netD = create_network(self.model_size, self.ngpus, self.latent_dim, device)
 
         # "Two time-scale update rule"(TTUR) to update netD 4x faster than netG.
-        self.optimizerG, self.optimizerD = utls.optimizers(self.netG, self.netD, arguments)
+        self.optimizerG, self.optimizerD = optimizers(self.netG, self.netD, arguments)
 
         # Sample noise used for generated output.
-        self.sample_noise = utls.sample_noise(arguments, self.latent_dim, device)
+        self.sample_noise = sample_noise(arguments, self.latent_dim, device)
 
         # Save config.
         self.Logger.save_configurations()
-        utls.creat_dump(self.model_dir, arguments)
+        creat_dump(self.model_dir, arguments)
 
         # Load data.
         self.Logger.loading_data()
-        self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = utls.split_manage_data(audio_dir, arguments,
-                                                                                                  self.batch_size)
+        self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = split_manage_data(audio_dir, arguments,
+                                                                                             self.batch_size)
+
+        self.D_cost_train, self.D_wass_train = 0, 0
 
         self.history, self.G_costs = [], []
         self.D_costs_train, self.D_wasses_train = [], []
@@ -71,10 +64,10 @@ class WaveGAN:
             G_cost_epoch = []
             for i in range(1, self.BATCH_NUM + 1):
                 #############################
-                # (1) Train Discriminator
+                # (1) Train Discriminator (n_discriminate_train times)
                 #############################
                 # Set Discriminators parameters to require gradients.
-                utls.require_net_update(self.netD)
+                require_net_update(self.netD)
 
                 one = torch.tensor(1, dtype=torch.float)
                 neg_one = torch.tensor(-1, dtype=torch.float)
@@ -83,6 +76,9 @@ class WaveGAN:
 
                 n_discriminate_train = 5
                 for _ in range(n_discriminate_train):  # train discriminator more than generator by (default)5
+                    #############################
+                    # (1.1) Train Discriminator 1 times
+                    #############################
                     self.netD.zero_grad()
 
                     # Noise
@@ -110,7 +106,7 @@ class WaveGAN:
                     gradient_penalty.backward(one)
 
                     # Compute cost * Wassertein loss..
-                    D_cost_train, D_wass_train = wassertein_loss(D_fake, D_real, gradient_penalty)
+                    self.D_cost_train, self.D_wass_train = wassertein_loss(D_fake, D_real, gradient_penalty)
 
                     # Update gradient of discriminator.
                     self.optimizerD.step()
@@ -119,57 +115,24 @@ class WaveGAN:
                     # (2) Compute Valid data
                     #############################
 
-                    D_cost_train, D_wass_train = self.compute_valid_data(noise, D_cost_train, D_wass_train,
-                                                                         D_cost_train_epoch, D_wass_train_epoch,
-                                                                         D_cost_valid_epoch, D_wass_valid_epoch)
+                    self.compute_valid_data(noise, D_cost_train_epoch,
+                                            D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch)
 
                 #############################
                 # (3) Train Generator
                 #############################
                 # Prevent discriminator update.
-                # utls.prevent_net_update(self.netD)
-                #
-                # # Reset generator gradients
-                # self.netG.zero_grad()
-                #
-                # # Noise
-                # noise = torch.Tensor(self.batch_size, self.latent_dim).uniform_(-1, 1)
-                # noise = noise.to(device)
-                # noise.requires_grad = False  # noise_Var = Variable(noise, requires_grad=False)
-                #
-                # fake = self.netG(noise)  # noise_Var
-                # G = self.netD(fake)
-                # G = G.mean()
-                #
-                # # Update gradients.
-                # G.backward(neg_one)
-                # G_cost = -G
-                #
-                # self.optimizerG.step()
-                #
-                # # Record costs
-                # if cuda:
-                #     G_cost = G_cost.cpu()
-                # G_cost_epoch.append(G_cost.data.numpy())
-                #
-                # if i % (self.BATCH_NUM // 5) == 0:
-                #     self.Logger.batch_info(start, epoch, i, self.BATCH_NUM, D_cost_train, D_wass_train, G_cost)
-                D_cost_train, D_wass_train = self.train_generator(neg_one, G_cost_epoch, start, epoch, i, D_cost_train, D_wass_train)
+                self.train_generator(neg_one, G_cost_epoch, start, epoch, i)
 
             # Save the average cost of batches in every epoch.
-            utls.save_avg_cost_one_epoch(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch,
-                                         G_cost_epoch,
-                                         self.D_costs_train, self.D_wasses_train, self.D_costs_valid,
-                                         self.D_wasses_valid, self.G_costs, self.Logger, start)
+            save_avg_cost_one_epoch(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch,
+                                    G_cost_epoch,
+                                    self.D_costs_train, self.D_wasses_train, self.D_costs_valid,
+                                    self.D_wasses_valid, self.G_costs, self.Logger, start)
 
             # Generate audio samples.
             if epoch % self.epochs_per_sample == 0:
-                # self.Logger.generating_samples()
-                #
-                # sample_out = self.netG(self.sample_noise)  # sample_noise_Var
-                # sample_out = sample_out.cpu().data.numpy()
-                # save_samples(sample_out, epoch, self.output_dir)
-                utls.generate_audio_samples(self.Logger, self.netG, self.sample_noise, epoch, self.output_dir)
+                generate_audio_samples(self.Logger, self.netG, self.sample_noise, epoch, self.output_dir)
 
                 # TODO: Early stopping by Inception Score(IS)
 
@@ -191,8 +154,7 @@ class WaveGAN:
 
         self.Logger.end()
 
-    def compute_valid_data(self, noise, D_cost_train, D_wass_train,
-                           D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch):
+    def compute_valid_data(self, noise, D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch):
         self.netD.zero_grad()
 
         valid_data_Var = numpy_to_var(next(self.valid_iter)['X'], device)
@@ -209,14 +171,13 @@ class WaveGAN:
                                                        fake_valid.data, self.batch_size, self.lmbda,
                                                        device=device)
 
-        utls.compute_and_record_batch_history(D_fake_valid, D_real_valid, D_cost_train, D_wass_train,
-                                              gradient_penalty_valid,
-                                              D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch,
-                                              D_wass_valid_epoch)
-        return D_cost_train, D_wass_train
+        compute_and_record_batch_history(D_fake_valid, D_real_valid, self.D_cost_train, self.D_wass_train,
+                                         gradient_penalty_valid,
+                                         D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch,
+                                         D_wass_valid_epoch)
 
-    def train_generator(self, neg_one, G_cost_epoch, start, epoch, i, D_cost_train, D_wass_train):
-        utls.prevent_net_update(self.netD)
+    def train_generator(self, neg_one, G_cost_epoch, start, epoch, i):
+        prevent_net_update(self.netD)
 
         # Reset generator gradients
         self.netG.zero_grad()
@@ -242,9 +203,7 @@ class WaveGAN:
         G_cost_epoch.append(G_cost.data.numpy())
 
         if i % (self.BATCH_NUM // 5) == 0:
-            self.Logger.batch_info(start, epoch, i, self.BATCH_NUM, D_cost_train, D_wass_train, G_cost)
-
-        return D_cost_train, D_wass_train
+            self.Logger.batch_info(start, epoch, i, self.BATCH_NUM, self.D_cost_train, self.D_wass_train, G_cost)
 
     # def __call__(self, *args, **kwargs):
     #     self.train()
