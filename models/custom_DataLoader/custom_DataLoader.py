@@ -8,8 +8,8 @@ import numpy as np
 import pescador
 
 from config import DATASET_NAME
-from utils.BasicUtils import make_path
-from utils.WaveGAN_utils import LOGGER
+from models.utils.BasicUtils import make_path
+from models.utils.WaveGAN_utils import LOGGER
 
 
 # ============================================================
@@ -147,3 +147,18 @@ def split_data(audio_path_list, valid_ratio, test_ratio, batch_size):
     test_data = batch_generator(test_files, batch_size)
 
     return train_data, valid_data, test_data, train_size
+
+
+def split_manage_data(audio_dir, arguments, batch_size):
+    from models.custom_DataLoader.custom_DataLoader import get_all_audio_filepaths
+    audio_paths = get_all_audio_filepaths(audio_dir)
+    from models.custom_DataLoader.custom_DataLoader import split_data
+    train_data, valid_data, test_data, train_size = split_data(audio_paths, arguments['valid-ratio'],
+                                                               arguments['test-ratio'],
+                                                               batch_size)
+    TOTAL_TRAIN_SAMPLES = train_size
+    BATCH_NUM = TOTAL_TRAIN_SAMPLES // batch_size
+
+    train_iter, valid_iter, test_iter = iter(train_data), iter(valid_data), iter(test_data)
+
+    return BATCH_NUM, train_iter, valid_iter, test_iter

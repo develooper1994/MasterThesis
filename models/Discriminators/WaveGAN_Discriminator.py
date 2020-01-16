@@ -68,32 +68,30 @@ class WaveGANDiscriminator(nn.Module):
         # TODO: Experiment with BatchNorm1d Layer
         # Try to DCGAN first and than Parallel WaveGAN, Progressive Growing and EfficientNet approaches.
         x = F.leaky_relu(self.conv1(x), negative_slope=self.alpha)
-        if self.verbose:
-            print(x.shape)
+        self.print_shape(x)
         x = self.ps1(x)
 
         x = F.leaky_relu(self.conv2(x), negative_slope=self.alpha)
-        if self.verbose:
-            print(x.shape)
+        self.print_shape(x)
         x = self.ps2(x)
 
         x = F.leaky_relu(self.conv3(x), negative_slope=self.alpha)
-        if self.verbose:
-            print(x.shape)
+        self.print_shape(x)
         x = self.ps3(x)
 
         x = F.leaky_relu(self.conv4(x), negative_slope=self.alpha)
-        if self.verbose:
-            print(x.shape)
+        self.print_shape(x)
         x = self.ps4(x)
 
         x = F.leaky_relu(self.conv5(x), negative_slope=self.alpha)
-        if self.verbose:
-            print(x.shape)
+        self.print_shape(x)
 
         # TODO: Try to convert linear to conv layer
         x = x.view(-1, 256 * self.model_size)
-        if self.verbose:
-            print(x.shape)
+        self.print_shape(x)
 
         return self.fc1(x)
+
+    def print_shape(self, x):
+        if self.verbose:
+            print(x.shape)

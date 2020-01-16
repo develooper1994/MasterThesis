@@ -7,13 +7,19 @@ from torch import autograd
 
 # my modules
 from models.losses.BaseLoss import wassertein_loss
-from utils import BasicUtils as utls_basic
-from utils.BasicUtils import Parameters, device, require_net_update, numpy_to_var, calc_gradient_penalty, \
-    prevent_net_update, cuda
-from utils.WaveGAN_utils import create_network, optimizers, sample_noise, creat_dump, split_manage_data, \
-    save_avg_cost_one_epoch, generate_audio_samples, compute_and_record_batch_history
-from utils.logger import logger
-from utils.visualization.visualization import plot_loss
+from models.utils import BasicUtils as utls_basic
+from models.utils.BasicUtils import Parameters, device, require_net_update, numpy_to_var, calc_gradient_penalty, \
+    prevent_net_update, cuda, creat_dump, compute_and_record_batch_history, save_avg_cost_one_epoch, device
+# from models.utils.WaveGAN_utils import create_network, optimizers, generate_audio_samples, sample_noise
+from models.utils.WaveGAN_utils import WaveGAN_utils
+from models.custom_DataLoader.custom_DataLoader import split_manage_data
+from models.utils.logger import logger
+from models.utils.visualization.visualization import plot_loss
+
+from models.Discriminators.WaveGAN_Discriminator import WaveGANDiscriminator
+from models.Generators.WaveGAN_Generator import WaveGANGenerator
+
+WaveGAN_utils = WaveGAN_utils()
 
 
 class WaveGAN:
@@ -27,13 +33,13 @@ class WaveGAN:
         self.epochs_per_sample, self.lmbda, audio_dir, self.output_dir = arguments.set_params()
         arguments = arguments.args
 
-        self.netG, self.netD = create_network(self.model_size, self.ngpus, self.latent_dim, device)
+        self.netG, self.netD = WaveGAN_utils.create_network(self.model_size, self.ngpus, self.latent_dim, device)
 
         # "Two time-scale update rule"(TTUR) to update netD 4x faster than netG.
-        self.optimizerG, self.optimizerD = optimizers(self.netG, self.netD, arguments)
+        self.optimizerG, self.optimizerD = WaveGAN_utils.optimizers(arguments)
 
         # Sample noise used for generated output.
-        self.sample_noise = sample_noise(arguments, self.latent_dim, device)
+        self.sample_noise = WaveGAN_utils.sample_noise(arguments, self.latent_dim, device)
 
         # Save config.
         self.Logger.save_configurations()
@@ -76,18 +82,11 @@ class WaveGAN:
                 neg_one = neg_one.to(device)
 
                 n_discriminate_train = 5
-                for _ in range(n_discriminate_train):  # train discriminator more than generator by (default)5
-                    #############################
-                    # (1.1) Train Discriminator 1 times
-                    #############################
-                    noise = self.train_discriminator_once(neg_one, one)
-
-                    #############################
-                    # (2) Compute Valid data
-                    #############################
-
-                    self.compute_valid_data(noise, D_cost_train_epoch,
-                                            D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch)
+                #############################
+                # (1.1) Train Discriminator 1 times
+                #############################
+                self._train_epoch(D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
+                                  n_discriminate_train, neg_one, one)
 
                 #############################
                 # (3) Train Generator
@@ -103,7 +102,7 @@ class WaveGAN:
 
             # Generate audio samples.
             if epoch % self.epochs_per_sample == 0:
-                generate_audio_samples(self.Logger, self.netG, self.sample_noise, epoch, self.output_dir)
+                WaveGAN_utils.generate_audio_samples(self.Logger, self.sample_noise, epoch, self.output_dir)
 
                 # TODO: Early stopping by Inception Score(IS)
 
@@ -117,39 +116,17 @@ class WaveGAN:
 
         self.Logger.end()
 
-    def last_touch(self) -> None:
-        """
-        Last process to end up training. Do it what do you want. Visualization, early stopping, checkpoint of models,
-        calculate metrics, ...
-        :return: None
-        """
-        utls_basic.save_models(self.output_dir, self.netD, self.netG)
-        self.Logger.save_loss_curve()
-        # Plot loss curve.
-        plot_loss(self.D_costs_train, self.D_wasses_train,
-                  self.D_costs_valid, self.D_wasses_valid, self.G_costs, self.output_dir)
+    def _train_epoch(self, D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
+                     n_discriminate_train, neg_one, one):
+        for _ in range(n_discriminate_train):  # train discriminator more than generator by (default)5
+            noise = self.train_discriminator_once(neg_one, one)
 
-    def compute_valid_data(self, noise, D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch):
-        self.netD.zero_grad()
+            #############################
+            # (2) Compute Valid data
+            #############################
 
-        valid_data_Var = numpy_to_var(next(self.valid_iter)['X'], device)
-        D_real_valid = self.netD(valid_data_Var)
-        D_real_valid = D_real_valid.mean()  # avg loss
-
-        # b) compute loss contribution from generated data, then backprop.
-        fake_valid = self.netG(noise)  # noise_Var
-        D_fake_valid = self.netD(fake_valid)
-        D_fake_valid = D_fake_valid.mean()
-
-        # c) compute gradient penalty and backprop
-        gradient_penalty_valid = calc_gradient_penalty(self.netD, valid_data_Var.data,
-                                                       fake_valid.data, self.batch_size, self.lmbda,
-                                                       device=device)
-
-        compute_and_record_batch_history(D_fake_valid, D_real_valid, self.D_cost_train, self.D_wass_train,
-                                         gradient_penalty_valid,
-                                         D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch,
-                                         D_wass_valid_epoch)
+            self.compute_valid_data(noise, D_cost_train_epoch,
+                                    D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch)
 
     def train_discriminator_once(self, neg_one, one):
         self.netD.zero_grad()
@@ -177,6 +154,28 @@ class WaveGAN:
         # Update gradient of discriminator.
         self.optimizerD.step()
         return noise
+
+    def compute_valid_data(self, noise, D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch):
+        self.netD.zero_grad()
+
+        valid_data_Var = numpy_to_var(next(self.valid_iter)['X'], device)
+        D_real_valid = self.netD(valid_data_Var)
+        D_real_valid = D_real_valid.mean()  # avg loss
+
+        # b) compute loss contribution from generated data, then backprop.
+        fake_valid = self.netG(noise)  # noise_Var
+        D_fake_valid = self.netD(fake_valid)
+        D_fake_valid = D_fake_valid.mean()
+
+        # c) compute gradient penalty and backprop
+        gradient_penalty_valid = calc_gradient_penalty(self.netD, valid_data_Var.data,
+                                                       fake_valid.data, self.batch_size, self.lmbda,
+                                                       device=device)
+
+        compute_and_record_batch_history(D_fake_valid, D_real_valid, self.D_cost_train, self.D_wass_train,
+                                         gradient_penalty_valid,
+                                         D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch,
+                                         D_wass_valid_epoch)
 
     def train_generator(self, neg_one, G_cost_epoch, start, epoch, i):
         prevent_net_update(self.netD)
@@ -206,6 +205,18 @@ class WaveGAN:
 
         if i % (self.BATCH_NUM // 5) == 0:
             self.Logger.batch_info(start, epoch, i, self.BATCH_NUM, self.D_cost_train, self.D_wass_train, G_cost)
+
+    def last_touch(self) -> None:
+        """
+        Last process to end up training. Do it what do you want. Visualization, early stopping, checkpoint of models,
+        calculate metrics, ...
+        :return: None
+        """
+        utls_basic.save_models(self.output_dir, self.netD, self.netG)
+        self.Logger.save_loss_curve()
+        # Plot loss curve.
+        plot_loss(self.D_costs_train, self.D_wasses_train,
+                  self.D_costs_valid, self.D_wasses_valid, self.G_costs, self.output_dir)
 
     # def __call__(self, *args, **kwargs):
     #     self.train()

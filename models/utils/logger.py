@@ -3,7 +3,7 @@ import logging
 
 # my modules
 # from utils.utils import time_since
-from utils.BasicUtils import *
+from models.utils.BasicUtils import *
 
 
 def init_console_logger(logger, verbose=False):

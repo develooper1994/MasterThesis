@@ -5,19 +5,19 @@
 
 
 # ============================================================
-# TODO: replace librosa with torchaudio
+# TTODO: replace librosa with torchaudio
 
 
-# TODO: replace librosa with torchaudio
+# TTODO: replace librosa with torchaudio
 # Adapted from @jtcramer https://github.com/jtcramer/wavegan/blob/master/sample.py.
 
 
-# TODO: replace with torchaudio
+# TTODO: replace with torchaudio
 
 
-# TODO: replace with torchaudio
+# TTODO: replace with torchaudio
 
 
-# TODO: replace with torchaudio
+# TTODO: replace with torchaudio
 
 

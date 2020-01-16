@@ -1,6 +1,7 @@
 # standart library
 import argparse
 import datetime
+import json
 import math
 import os
 import pickle
@@ -13,6 +14,7 @@ import torch
 from torch import autograd
 
 from config import DATASET_NAME, OUTPUT_PATH, EPOCHS, BATCH_SIZE, SAMPLE_EVERY, SAMPLE_NUM
+from models.losses.BaseLoss import wassertein_loss
 
 cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda" if cuda else "cpu")
@@ -237,3 +239,77 @@ def save_models(output_dir, netD, netG):
     netG_path = os.path.join(output_dir, "generator.pkl")
     torch.save(netD.state_dict(), netD_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
     torch.save(netG.state_dict(), netG_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def parallel_models(device, *nets):
+    net = []
+    for n in nets:
+        n = torch.nn.DataParallel(n).to(device)
+        net.append(n)
+    return net
+
+
+def creat_dump(model_dir, arguments):
+    config_path = os.path.join(model_dir, 'config.json')
+    with open(config_path, 'w') as f:
+        json.dump(arguments, f)
+
+
+def tocuda_all(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
+    D_cost_train = D_cost_train.cuda()
+    D_wass_train = D_wass_train.cuda()
+    D_cost_valid = D_cost_valid.cuda()
+    D_wass_valid = D_wass_valid.cuda()
+    return D_cost_train, D_wass_train, D_cost_valid, D_wass_valid
+
+
+def tocpu_all(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
+    D_cost_train = D_cost_train.cpu()
+    D_wass_train = D_wass_train.cpu()
+    D_cost_valid = D_cost_valid.cpu()
+    D_wass_valid = D_wass_valid.cpu()
+    return D_cost_train, D_wass_train, D_cost_valid, D_wass_valid
+
+
+def record_costs(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch,
+                 D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
+    D_cost_train_epoch.append(D_cost_train.data.numpy())
+    D_wass_train_epoch.append(D_wass_train.data.numpy())
+    D_cost_valid_epoch.append(D_cost_valid.data.numpy())
+    D_wass_valid_epoch.append(D_wass_valid.data.numpy())
+
+
+def compute_and_record_batch_history(D_fake_valid, D_real_valid, D_cost_train, D_wass_train, gradient_penalty_valid,
+                                     D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch):
+
+    # validation loss
+    # D_cost_valid = D_fake_valid - D_real_valid + gradient_penalty_valid
+    # D_wass_valid = D_real_valid - D_fake_valid
+    D_cost_valid, D_wass_valid = wassertein_loss(D_fake_valid, D_real_valid, gradient_penalty_valid)
+
+    D_cost_train, D_wass_train, D_cost_valid, D_wass_valid = \
+        tocpu_all(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid)
+
+    # Record costs
+    record_costs(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch,
+                 D_cost_train, D_wass_train, D_cost_valid, D_wass_valid)
+
+
+def save_avg_cost_one_epoch(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch,
+                            G_cost_epoch,
+                            D_costs_train, D_wasses_train, D_costs_valid, D_wasses_valid, G_costs, Logger, start):
+    # Save the average cost of batches in every epoch.
+    D_cost_train_epoch_avg = sum(D_cost_train_epoch) / float(len(D_cost_train_epoch))
+    D_wass_train_epoch_avg = sum(D_wass_train_epoch) / float(len(D_wass_train_epoch))
+    D_cost_valid_epoch_avg = sum(D_cost_valid_epoch) / float(len(D_cost_valid_epoch))
+    D_wass_valid_epoch_avg = sum(D_wass_valid_epoch) / float(len(D_wass_valid_epoch))
+    G_cost_epoch_avg = sum(G_cost_epoch) / float(len(G_cost_epoch))
+
+    D_costs_train.append(D_cost_train_epoch_avg)
+    D_wasses_train.append(D_wass_train_epoch_avg)
+    D_costs_valid.append(D_cost_valid_epoch_avg)
+    D_wasses_valid.append(D_wass_valid_epoch_avg)
+    G_costs.append(G_cost_epoch_avg)
+
+    Logger.batch_loss(start, D_cost_train_epoch_avg, D_wass_train_epoch_avg,
+                      D_cost_valid_epoch_avg, D_wass_valid_epoch_avg, G_cost_epoch_avg)

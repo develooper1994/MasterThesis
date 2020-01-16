@@ -79,23 +79,26 @@ class WaveGANGenerator(nn.Module):
         # Try to DCGAN first and than Parallel WaveGAN, Progressive Growing and EfficientNet approaches.
         x = self.fc1(x).view(-1, 16 * self.model_size, 16)  # format for deconv layers.
         x = F.relu(x)
-        if self.verbose:
-            print(x.shape)
+        # TODO try layer visualization
+        self.print_shape(x)
 
         x = F.relu(self.deconv_1(x))
-        if self.verbose:
-            print(x.shape)
+        self.print_shape(x)
 
         x = F.relu(self.deconv_2(x))
-        if self.verbose:
-            print(x.shape)
+        self.print_shape(x)
 
         x = F.relu(self.deconv_3(x))
-        if self.verbose:
-            print(x.shape)
+        self.print_shape(x)
 
         x = F.relu(self.deconv_4(x))
+        self.print_shape(x)
+
+        return torch.tanh(self.deconv_5(x))
+
+    def print_shape(self, x):
         if self.verbose:
             print(x.shape)
 
-        return torch.tanh(self.deconv_5(x))
+    def sample_latent(self, num_samples):
+        return torch.randn((num_samples, self.latent_dim))

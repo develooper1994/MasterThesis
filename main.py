@@ -1,5 +1,5 @@
 # from models.wavegan import WaveGAN
-from Trainers.Trainer import Trainer
+from models.Trainers.Trainer import Trainer
 
 
 def main():
