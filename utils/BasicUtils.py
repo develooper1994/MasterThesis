@@ -14,6 +14,10 @@ from torch import autograd
 
 from config import DATASET_NAME, OUTPUT_PATH, EPOCHS, BATCH_SIZE, SAMPLE_EVERY, SAMPLE_NUM
 
+cuda = True if torch.cuda.is_available() else False
+device = torch.device("cuda" if cuda else "cpu")
+print("Training device: {}".format(device))
+
 
 def make_path(output_path):
     """
@@ -209,10 +213,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, lmbda, device=
 
     # Interpolate between real and fake data.
     interpolates = alpha * real_data + (1 - alpha) * fake_data
-    # if device:
-    #     interpolates = interpolates.cuda()
     interpolates = interpolates.to(device)
-    # interpolates = autograd.Variable(interpolates, requires_grad=True)
     interpolates.requires_grad = True
 
     # Evaluate discriminator
@@ -236,12 +237,3 @@ def save_models(output_dir, netD, netG):
     netG_path = os.path.join(output_dir, "generator.pkl")
     torch.save(netD.state_dict(), netD_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
     torch.save(netG.state_dict(), netG_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
-
-class GANUtils:
-    pass
-
-
-# def create_network(model_size, ngpus, latent_dim, device):
-#     netG = WaveGANGenerator(model_size=model_size, ngpus=ngpus, latent_dim=latent_dim, upsample=True)
-#     netD = WaveGANDiscriminator(model_size=model_size, ngpus=ngpus)
-#     return netG, netD
