@@ -85,7 +85,7 @@ class Parameters:
             'output_dir': output,
             'epochs_per_sample': SAMPLE_EVERY,
             'lmbda': 10.0,
-            'audio_dir': traindata,
+            'input_dir': traindata,
             'phase-shuffle-shift-factor': 2,
             'post-proc-filt-len': 512,
             'lrelu-alpha': 0.2,
@@ -148,7 +148,7 @@ class Parameters:
         parser.add_argument('-bt', '--beta-two', dest='beta2', type=float, default=self.args['beta-two'],
                             help='beta_2 ADAM parameter')
         parser.add_argument('-v', '--verbose', dest='verbose', action='store_true')
-        parser.add_argument('-audio_dir', '--audio_dir', dest='audio_dir', type=str, default=self.args['audio_dir'],
+        parser.add_argument('-input_dir', '--input_dir', dest='input_dir', type=str, default=self.args['input_dir'],
                             help='Path to directory containing audio files')
         parser.add_argument('-output_dir', '--output_dir', dest='output_dir', type=str, default=self.args['output_dir'],
                             help='Path to directory where model files will be output')
@@ -160,7 +160,7 @@ class Parameters:
 
         return args
 
-    def set_params(self):
+    def get_params(self):
         arguments = Parameters(False)
         arguments = arguments.args
         epochs = arguments['num_epochs']
@@ -177,7 +177,7 @@ class Parameters:
         lmbda = arguments['lmbda']
 
         # Dir
-        audio_dir = arguments['audio_dir']
+        audio_dir = arguments['input_dir']
         output_dir = arguments['output_dir']
 
         return epochs, batch_size, latent_dim, ngpus, model_size, model_dir, \

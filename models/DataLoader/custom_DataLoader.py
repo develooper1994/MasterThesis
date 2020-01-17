@@ -1,3 +1,5 @@
+# Subset of the Speech Commands dataset: https://research.googleblog.com/2017/08/launching-speech-commands-dataset.html
+# License: https://creativecommons.org/licenses/by/4.0/
 import os
 import random
 
@@ -6,15 +8,17 @@ import numpy as np
 # from torch.autograd import Variable
 # pescador has no cuda and TorchJIT support
 import pescador
+import torch
+import torchaudio as to
 
-from config import DATASET_NAME
+from config import DATASET_NAME, WINDOW_LENGHT, FS
 from models.utils.BasicUtils import make_path
 from models.utils.WaveGAN_utils import LOGGER
 
 
 # ============================================================
 # TODO: replace librosa with torchaudio
-def save_samples(epoch_samples, epoch, output_dir, fs=16000) -> None:
+def save_samples(epoch_samples, epoch, output_dir, fs=FS) -> None:
     """
     Save output samples for each iteration to examine progress
     :param epoch_samples: samples for each iteration
@@ -33,7 +37,7 @@ def save_samples(epoch_samples, epoch, output_dir, fs=16000) -> None:
 
 # TODO: replace librosa with torchaudio
 # Adapted from @jtcramer https://github.com/jtcramer/wavegan/blob/master/sample.py.
-def sample_generator(filepath, window_length=16384, fs=16000):
+def sample_generator(filepath, window_length=WINDOW_LENGHT, fs=FS):
     """
     Audio sample generator from dataset
     :param filepath: Full path for dataset
@@ -126,9 +130,9 @@ def split_data(audio_path_list, valid_ratio, test_ratio, batch_size):
     :param batch_size: size(lenght) of batch
     :return: tuple of splited into (*Train, *Validation, *Test)
     """
-    num_files = len(audio_path_list)
-    num_valid = int(np.ceil(num_files * valid_ratio))
-    num_test = int(np.ceil(num_files * test_ratio))
+    num_files = torch.tensor(len(audio_path_list), dtype=torch.int)
+    num_valid = int(torch.ceil(num_files * valid_ratio))
+    num_test = int(torch.ceil(num_files * test_ratio))
     num_train = num_files - num_valid - num_test
 
     if num_valid <= 0 or num_test <= 0 or num_train <= 0:
@@ -150,9 +154,7 @@ def split_data(audio_path_list, valid_ratio, test_ratio, batch_size):
 
 
 def split_manage_data(audio_dir, arguments, batch_size):
-    from models.custom_DataLoader.custom_DataLoader import get_all_audio_filepaths
     audio_paths = get_all_audio_filepaths(audio_dir)
-    from models.custom_DataLoader.custom_DataLoader import split_data
     train_data, valid_data, test_data, train_size = split_data(audio_paths, arguments['valid-ratio'],
                                                                arguments['test-ratio'],
                                                                batch_size)

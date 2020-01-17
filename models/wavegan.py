@@ -5,19 +5,17 @@ import time
 import torch
 from torch import autograd
 
+from models.DataLoader.custom_DataLoader import split_manage_data
 # my modules
 from models.losses.BaseLoss import wassertein_loss
 from models.utils import BasicUtils as utls_basic
-from models.utils.BasicUtils import Parameters, device, require_net_update, numpy_to_var, calc_gradient_penalty, \
+from models.utils.BasicUtils import Parameters, require_net_update, numpy_to_var, calc_gradient_penalty, \
     prevent_net_update, cuda, creat_dump, compute_and_record_batch_history, save_avg_cost_one_epoch, device
-# from models.utils.WaveGAN_utils import create_network, optimizers, generate_audio_samples, sample_noise
 from models.utils.WaveGAN_utils import WaveGAN_utils
-from models.custom_DataLoader.custom_DataLoader import split_manage_data
 from models.utils.logger import logger
 from models.utils.visualization.visualization import plot_loss
 
-from models.Discriminators.WaveGAN_Discriminator import WaveGANDiscriminator
-from models.Generators.WaveGAN_Generator import WaveGANGenerator
+from models.DataLoader.AudioDataset import AudioDataset
 
 WaveGAN_utils = WaveGAN_utils()
 
@@ -27,12 +25,17 @@ class WaveGAN:
         self.Logger = logger()
         self.Logger.start()
 
+
         # =============Set Parameters===============
         arguments = Parameters(False)
         self.epochs, self.batch_size, self.latent_dim, self.ngpus, self.model_size, self.model_dir, \
-        self.epochs_per_sample, self.lmbda, audio_dir, self.output_dir = arguments.set_params()
+        self.epochs_per_sample, self.lmbda, audio_dir, self.output_dir = arguments.get_params()
         arguments = arguments.args
 
+        # Dataset
+        self.dataset = AudioDataset(input_dir=audio_dir, output_dir=self.output_dir)
+
+        # network
         self.netG, self.netD = WaveGAN_utils.create_network(self.model_size, self.ngpus, self.latent_dim, device)
 
         # "Two time-scale update rule"(TTUR) to update netD 4x faster than netG.
@@ -47,8 +50,8 @@ class WaveGAN:
 
         # Load data.
         self.Logger.loading_data()
-        self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = split_manage_data(audio_dir, arguments,
-                                                                                             self.batch_size)
+        # self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = split_manage_data(audio_dir, arguments, self.batch_size)
+        self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = split_manage_data(audio_dir, arguments, self.batch_size)
 
         self.D_cost_train, self.D_wass_train = 0, 0
 

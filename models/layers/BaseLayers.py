@@ -1,11 +1,72 @@
 from torch import nn as nn
+from torch.nn import functional as F
+
+
+class Reshape(nn.Module):
+    def __init__(self, shape):
+        super(Reshape, self).__init__()
+        self.shape = shape
+
+    def forward(self, x):
+        return x.view(*self.shape)
+
+
+class WaveResBlock(nn.Module):
+    def __init__(self, ic, oc, last_act='leakyrelu', resolution_type='upsample'):
+        super(WaveResBlock, self).__init__()
+        self.last_act = last_act
+        if resolution_type == 'upsample':
+            self.resolution = UpSample1D()
+        elif resolution_type == 'downsample':
+            self.resolution = DownSample1D()
+        self.conv1 = nn.Conv1d(ic, ic, 25, 1, 12)
+        self.conv2 = nn.Conv1d(ic, ic, 25, 1, 12)
+        self.conv3 = nn.Conv1d(ic, oc, 25, 1, 12)
+        self.norm1 = nn.InstanceNorm1d(ic)
+        self.norm2 = nn.InstanceNorm1d(ic)
+
+        self.sigmoid = nn.Sigmoid()
+        self.tanh = nn.Tanh()
+        self.relu = nn.LeakyReLU(0.2, inplace=True)
+
+    def forward(self, x):
+        out = self.relu(self.norm1(self.conv1(x)))
+        out = self.relu(self.norm2(self.conv2(out)))
+        out = self.resolution(out + x)
+        if self.last_act == 'sigmoid':
+            out = self.sigmoid(self.conv3(out))
+        elif self.last_act == 'tanh':
+            out = self.tanh(self.conv3(out))
+        elif self.last_act == 'leakyrelu':
+            out = self.relu(self.conv3(out))
+        return out
+
+
+class UpSample1D(nn.Module):
+    def __init__(self):
+        super(UpSample1D, self).__init__()
+        self.scale_factor = 4
+
+    def forward(self, x):
+        return F.interpolate(x, None, self.scale_factor, 'linear', align_corners=True)
+
+
+class DownSample1D(nn.Module):
+    def __init__(self):
+        super(DownSample1D, self).__init__()
+        self.scale_factor = 4
+
+    def forward(self, x):
+        return F.avg_pool1d(x, self.scale_factor)
 
 
 class Transpose1dLayer(nn.Module):
     """
     Package of all 1d Convolution Transpose Layer
     """
-    def __init__(self, in_channels, out_channels, kernel_size, stride, padding=11, upsample=None, output_padding=1) -> None:
+
+    def __init__(self, in_channels, out_channels, kernel_size, stride, padding=11, upsample=None,
+                 output_padding=1) -> None:
         """
         Initialize 1d Convolution Transpose Layer package
 
