@@ -2,6 +2,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 from models.DataLoader.AudioDataset import AudioDataset, Sc09, Piano
+from config import OUTPUT_PATH
 
 
 # original: https://github.com/ericlearning/generative-unconditional/blob/master/dataset.py
@@ -70,19 +71,22 @@ class Dataset:
 
         ## audio datasets
         elif self.basic_types.lower() == 'sc09':
-            train_dataset = Sc09(self.train_dir, data_transform, audio_sample_num)
+            print("Not completed yet!!!")
+            train_dataset = AudioDataset(self.train_dir, data_transform, audio_sample_num)
             train_loader = DataLoader(train_dataset, batch_size=bs, shuffle=self.shuffle, num_workers=num_workers)
 
             returns = train_loader
 
         elif self.basic_types.lower() == 'piano':
-            train_dataset = Piano(self.train_dir, data_transform, audio_sample_num)
+            print("Not completed yet!!!")
+            train_dataset = AudioDataset(self.train_dir, data_transform, audio_sample_num)
             train_loader = DataLoader(train_dataset, batch_size=bs, shuffle=self.shuffle, num_workers=num_workers)
 
             returns = train_loader
 
         elif self.basic_types.lower() == 'audio':
-            train_dataset = AudioDataset(self.train_dir, data_transform, audio_sample_num)
+            print("Not completed yet!!!")
+            train_dataset = AudioDataset(self.train_dir, OUTPUT_PATH, data_transform, audio_sample_num)
             train_loader = DataLoader(train_dataset, batch_size=bs, shuffle=self.shuffle, num_workers=num_workers)
 
             returns = train_loader

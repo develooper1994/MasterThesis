@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 import torchaudio
 from torchaudio import datasets, transforms
 
-from config import DATASET_NAME, OUTPUT_PATH, WINDOW_LENGHT, FS, EPOCHS
+from config import DATASET_NAME, OUTPUT_PATH, SAMPLE_NUM, WINDOW_LENGHT, FS, EPOCHS
 from models.utils.BasicUtils import make_path
 # from models.utils.WaveGAN_utils import LOGGER as L  # ImportError: cannot import name 'LOGGER' from
 # 'models.utils.WaveGAN_utils'
@@ -18,7 +18,7 @@ from models.utils import WaveGAN_utils
 
 
 class AudioDataset(Dataset):
-    def __init__(self, input_dir=None, output_dir=None, input_transform=None):
+    def __init__(self, input_dir=None, output_dir=None, input_transform=None, audio_sample_num=SAMPLE_NUM):
         self.input_dir = input_dir
         if input_dir is None:
             self.input_dir = DATASET_NAME
