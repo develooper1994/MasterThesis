@@ -12,6 +12,8 @@ from torchaudio import datasets, transforms
 
 from config import DATASET_NAME, OUTPUT_PATH, WINDOW_LENGHT, FS, EPOCHS
 from models.utils.BasicUtils import make_path
+# from models.utils.WaveGAN_utils import LOGGER as L  # ImportError: cannot import name 'LOGGER' from
+# 'models.utils.WaveGAN_utils'
 from models.utils import WaveGAN_utils
 
 
@@ -25,7 +27,7 @@ class AudioDataset(Dataset):
             self.output_dir = OUTPUT_PATH
         self.input_transform = input_transform
 
-        self.audio_name_list = self.get_all_audio_filepaths()
+        self.audio_name_list = self.get_all_audio_filepaths
 
     def __len__(self):
         return len(self.audio_name_list)
@@ -53,6 +55,7 @@ class AudioDataset(Dataset):
 
         return input_audio, 0
 
+    @property
     def get_all_audio_filepaths(self):
         """
         Returns all available audio file paths
@@ -82,7 +85,8 @@ class AudioDataset(Dataset):
             librosa.output.write_wav(output_path, sample, fs)
 
     # Adapted from @jtcramer https://github.com/jtcramer/wavegan/blob/master/sample.py.
-    def sample_generator(self, filepath, window_length=WINDOW_LENGHT, fs=FS):
+    @staticmethod
+    def sample_generator(filepath, window_length=WINDOW_LENGHT, fs=FS):
         """
         Audio sample generator from dataset
         :param filepath: Full path for dataset
@@ -181,7 +185,8 @@ class AudioDataset(Dataset):
         return train_data, valid_data, test_data, train_size
 
     def split_manage_data(self, arguments, batch_size):
-        train_data, valid_data, test_data, train_size = self.split_data(self.audio_name_list, arguments['valid-ratio'],
+        train_data, valid_data, test_data, train_size = self.split_data(self.audio_name_list,
+                                                                        arguments['valid-ratio'],
                                                                         arguments['test-ratio'],
                                                                         batch_size)
         TOTAL_TRAIN_SAMPLES = train_size
@@ -192,9 +197,11 @@ class AudioDataset(Dataset):
         return BATCH_NUM, train_iter, valid_iter, test_iter
 
 
-class Sc09:
-    pass
+class Sc09(AudioDataset):
+    def __init__(self):
+        super(Sc09, self).__init__()
 
 
 class Piano:
-    pass
+    def __init__(self):
+        super(Piano, self).__init__()

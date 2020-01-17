@@ -51,7 +51,7 @@ class WaveGAN:
         # Load data.
         self.Logger.loading_data()
         # self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = split_manage_data(audio_dir, arguments, self.batch_size)
-        self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = split_manage_data(audio_dir, arguments, self.batch_size)
+        self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = self.dataset.split_manage_data(arguments, self.batch_size)
 
         self.D_cost_train, self.D_wass_train = 0, 0
 
@@ -62,8 +62,6 @@ class WaveGAN:
     def train(self):
         # =============Train===============
         start = time.time()
-        # self.Logger.info('Starting training...EPOCHS={}, BATCH_SIZE={}, BATCH_NUM={}'.format(self.epochs, self.batch_size,
-        #                                                                                 self.BATCH_NUM))
         self.Logger.start_training(self.epochs, self.batch_size, self.BATCH_NUM)
         for epoch in range(1, self.epochs + 1):
             # self.Logger.info("{} Epoch: {}/{}".format(time_since(start), epoch, self.epochs))

@@ -155,7 +155,8 @@ def split_data(audio_path_list, valid_ratio, test_ratio, batch_size):
 
 def split_manage_data(audio_dir, arguments, batch_size):
     audio_paths = get_all_audio_filepaths(audio_dir)
-    train_data, valid_data, test_data, train_size = split_data(audio_paths, arguments['valid-ratio'],
+    train_data, valid_data, test_data, train_size = split_data(audio_paths,
+                                                               arguments['valid-ratio'],
                                                                arguments['test-ratio'],
                                                                batch_size)
     TOTAL_TRAIN_SAMPLES = train_size
