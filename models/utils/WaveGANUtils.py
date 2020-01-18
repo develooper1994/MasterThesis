@@ -3,26 +3,28 @@ import logging
 import torch
 from torch import optim
 
-from models.Discriminators.WaveGAN_Discriminator import WaveGANDiscriminator
-from models.Generators.WaveGAN_Generator import WaveGANGenerator
+from models.Discriminators.WaveGANDiscriminator import WaveGANDiscriminator
+from models.Generators.WaveGANGenerator import WaveGANGenerator
 
 # TODO: write document for each function.
 # from models.utils.utils import Logger
-from models.utils.BaseGAN_Utils import BaseGANUtils
+from models.utils.BaseGANUtils import BaseGANUtils
 
 # File Logger Configfuration
 from models.utils.BasicUtils import parallel_models
 
-LOGGER = logging.getLogger('wavegan')
-LOGGER.setLevel(logging.DEBUG)
+# LOGGER = logging.getLogger('wavegan')
+# LOGGER.setLevel(logging.DEBUG)
 
 
-class WaveGAN_utils(BaseGANUtils):
+class WaveGANUtils(BaseGANUtils):
     def __init__(self):
         super().__init__(WaveGANGenerator, WaveGANDiscriminator)
+        self.LOGGER = logging.getLogger('wavegan')
+        self.LOGGER.setLevel(logging.DEBUG)
 
-    def create_network(self, model_size, ngpus, latent_dim, device):
-        return super().create_network(model_size, ngpus, latent_dim, device)
+    def create_network(self, model_size, ngpus, latent_dim):
+        return super().create_network(model_size, ngpus, latent_dim)
 
     def optimizers(self, arguments):
         return super().optimizers(arguments)

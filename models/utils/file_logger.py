@@ -19,12 +19,12 @@ def init_console_logger(logger, verbose=False):
     logger.addHandler(file_handler)
 
 
-class logger:
+class file_logger:
     def __init__(self):
         self.LOGGER = logging.getLogger('wavegan')
         self.LOGGER.setLevel(logging.DEBUG)
 
-        self.LOGGER.info('Initialized logger.')
+        self.LOGGER.info('Initialized file_logger.')
 
     def start(self):
         init_console_logger(self.LOGGER)

@@ -9,6 +9,7 @@ class WaveGANDiscriminator(nn.Module):
     """
     WaveGAN Discriminators Network
     """
+
     def __init__(self, model_size=64, ngpus=1, num_in_channels=1, shift_factor=2,
                  alpha=0.2, verbose=False) -> None:
         """
@@ -95,3 +96,6 @@ class WaveGANDiscriminator(nn.Module):
     def print_shape(self, x):
         if self.verbose:
             print(x.shape)
+
+    def __repr__(self):
+        return 'WaveGANDiscriminator'

@@ -14,3 +14,6 @@ FS = 16000
 # Data
 DATASET_NAME = "/home/selcuk/.pytorch/sc09/"  # 'sc09/'
 OUTPUT_PATH = "output/"
+
+# Model(Network)
+MODEL = "wavegan"

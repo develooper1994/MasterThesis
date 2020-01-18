@@ -102,3 +102,6 @@ class WaveGANGenerator(nn.Module):
 
     def sample_latent(self, num_samples):
         return torch.randn((num_samples, self.latent_dim))
+
+    def __repr__(self):
+        return 'WaveGANGenerator'

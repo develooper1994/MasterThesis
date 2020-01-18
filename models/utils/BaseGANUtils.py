@@ -6,19 +6,17 @@ from torch import optim
 
 # File Logger Configfuration
 from models.utils.BasicUtils import parallel_models
-from models.DataLoader.AudioDataset import AudioDataset
-
 
 class BaseGANUtils:
     def __init__(self, Generator, Discriminator):
         self.netG = Generator
         self.netD = Discriminator
 
-    def create_network(self, model_size, ngpus, latent_dim, device):
+    def create_network(self, model_size, ngpus, latent_dim):
         self.netG = self.netG(model_size=model_size, ngpus=ngpus, latent_dim=latent_dim, upsample=True)
         self.netD = self.netD(model_size=model_size, ngpus=ngpus)
 
-        netG, netD = parallel_models(device, self.netG, self.netD)
+        netG, netD = parallel_models(self.netG, self.netD)
         return netG, netD
 
     def optimizers(self, arguments):
@@ -35,7 +33,7 @@ class BaseGANUtils:
         return sample_noise
 
     def generate_audio_samples(self, Logger, sample_noise, epoch, output_dir):
-        # from models.DataLoader.AudioDataset import AudioDataset
+        from models.DataLoader.AudioDataset import AudioDataset
 
         Logger.generating_samples()
 

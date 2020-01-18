@@ -13,7 +13,7 @@ import torchaudio as to
 
 from config import DATASET_NAME, WINDOW_LENGHT, FS
 from models.utils.BasicUtils import make_path
-from models.utils.WaveGAN_utils import LOGGER
+from models.utils.WaveGANUtils import WaveGANUtils  # LOGGER
 
 
 # ============================================================
@@ -55,7 +55,7 @@ def sample_generator(filepath, window_length=WINDOW_LENGHT, fs=FS):
         if max_mag > 1:
             audio_data /= max_mag
     except Exception as e:
-        LOGGER.error("Could not load {}: {}".format(filepath, str(e)))
+        WaveGANUtils.LOGGER.error("Could not load {}: {}".format(filepath, str(e)))
         raise StopIteration
 
     # Pad audio to >= window_length.
@@ -136,7 +136,7 @@ def split_data(audio_path_list, valid_ratio, test_ratio, batch_size):
     num_train = num_files - num_valid - num_test
 
     if num_valid <= 0 or num_test <= 0 or num_train <= 0:
-        LOGGER.error("Please download DATASET '{}' and put it under current path !".format(DATASET_NAME))
+        WaveGANUtils.LOGGER.error("Please download DATASET '{}' and put it under current path !".format(DATASET_NAME))
 
     # Random shuffle the audio_path_list for splitting.
     random.shuffle(audio_path_list)

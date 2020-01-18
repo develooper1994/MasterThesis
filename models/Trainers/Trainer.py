@@ -1,33 +1,31 @@
-# modules
-from models.wavegan import WaveGAN
+# That modules connects BaseTrainer.py with GANSelector.py to make compact Trainer mechanism
 
+# my modules
 import torch
+from torch.utils.data import dataset, DataLoader
 
+from models.Trainers.BaseTrainer import BaseTrainer
+from models.GANSelector import GANSelector
+from config import DATASET_NAME, DATASET_NAME, OUTPUT_PATH, SAMPLE_NUM, WINDOW_LENGHT, FS, EPOCHS, BATCH_SIZE, MODEL
 
-# cuda = True if torch.cuda.is_available() else False
-# device = torch.device("cuda" if cuda else "cpu")
+from models.utils.WaveGANUtils import WaveGANUtils
+from models.DataLoader.AudioDataset import AudioDataset
+from models.utils.BasicUtils import Parameters
 
 
 class Trainer:
-    def select_trainer(self, trainer: str = None) -> None:
-        trainer = trainer.lower()
-        if trainer is None:
-            trainer = self.GAN_name
+    def __init__(self, GAN_name: str = MODEL) -> None:
+        self.GAN_name = GAN_name.lower()
+        self.GAN = GANSelector(self.GAN_name)
 
-        # select GAN
-        if trainer == "wavegan":
-            GAN = WaveGAN()
-            GAN.train()
-        elif trainer == "segan":
-            pass
-        elif trainer == "segan+" or "seganplus":
-            pass
-        else:
-            print("I don't know your GAN")
+        arguments = Parameters(False)
+        self.arguments = arguments.args
+        self.dataset = AudioDataset(input_dir=DATASET_NAME, output_dir=OUTPUT_PATH)
+        self.dataloader = self.dataset.split_manage_data(self.arguments, BATCH_SIZE)
 
-    def __init__(self, GAN_name: str) -> None:
-        self.GAN_name = GAN_name
-        self.select_trainer(GAN_name)
+        # self.select_trainer(self.GAN_name)
+        self.trainer = BaseTrainer(self.GAN.netG, self.GAN.netD, self.GAN.optimizerG, self.GAN.optimizerD,
+                              use_cuda=torch.cuda.is_available())
 
-    def __call__(self, *args, **kwargs) -> None:
-        self.select_trainer()
+    def train(self):
+        self.trainer.train(self.dataloader, EPOCHS, save_training_gif=True)

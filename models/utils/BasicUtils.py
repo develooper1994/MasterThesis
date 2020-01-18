@@ -17,6 +17,7 @@ from config import DATASET_NAME, OUTPUT_PATH, EPOCHS, BATCH_SIZE, SAMPLE_EVERY, 
 from models.losses.BaseLoss import wassertein_loss
 
 cuda = True if torch.cuda.is_available() else False
+global device
 device = torch.device("cuda" if cuda else "cpu")
 print("Training device: {}".format(device))
 
@@ -60,7 +61,7 @@ def require_net_update(net):
         p.requires_grad = True
 
 
-def numpy_to_var(numpy_data, device):
+def numpy_to_var(numpy_data):
     """
     Convert numpy array to Variable.
     :param numpy_data: data in numpy array.
@@ -241,7 +242,7 @@ def save_models(output_dir, netD, netG):
     torch.save(netG.state_dict(), netG_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def parallel_models(device, *nets):
+def parallel_models(*nets):
     net = []
     for n in nets:
         n = torch.nn.DataParallel(n).to(device)

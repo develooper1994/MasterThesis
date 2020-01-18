@@ -1,12 +1,16 @@
 # from models.wavegan import WaveGAN
+from models.architectures.wavegan import WaveGAN
+
 from models.Trainers.Trainer import Trainer
 
 
 def main():
     # TODO: Implement for all gan types
-    # gan = WaveGAN()  # default behaviour is train.
-    # gan.train()
-    Trainer("wavegan")
+    wavegan = WaveGAN()
+    wavegan.train()
+
+    # trainer = Trainer("wavegan")
+    # trainer.train()
 
 
 if __name__ == "__main__":

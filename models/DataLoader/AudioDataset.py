@@ -12,9 +12,9 @@ from torchaudio import datasets, transforms
 
 from config import DATASET_NAME, OUTPUT_PATH, SAMPLE_NUM, WINDOW_LENGHT, FS, EPOCHS
 from models.utils.BasicUtils import make_path
-# from models.utils.WaveGAN_utils import LOGGER as L  # ImportError: cannot import name 'LOGGER' from
-# 'models.utils.WaveGAN_utils'
-from models.utils import WaveGAN_utils
+# from models.utils.WaveGANUtils import LOGGER as L  # ImportError: cannot import name 'LOGGER' from
+# 'models.utils.WaveGANUtils'
+from models.utils.WaveGANUtils import WaveGANUtils
 
 
 class AudioDataset(Dataset):
@@ -34,6 +34,7 @@ class AudioDataset(Dataset):
 
     def __getitem__(self, idx):
         # TODO Test and use.
+        print("Not done yet!!!")
         if torch.is_tensor(idx):
             idx = idx.tolist()
         # input_audio = np.load(os.path.join(self.input_dir, self.audio_name_list[idx]))
@@ -104,7 +105,7 @@ class AudioDataset(Dataset):
             if max_mag > 1:
                 audio_data /= max_mag
         except Exception as e:
-            WaveGAN_utils.LOGGER.error("Could not load {}: {}".format(filepath, str(e)))
+            WaveGANUtils.LOGGER.error("Could not load {}: {}".format(filepath, str(e)))
             raise StopIteration
 
         # Pad audio to >= window_length.
@@ -168,7 +169,7 @@ class AudioDataset(Dataset):
         num_train = num_files - num_valid - num_test
 
         if num_valid <= 0 or num_test <= 0 or num_train <= 0:
-            WaveGAN_utils.LOGGER.error("Please download DATASET '{}' and put it under current path !".format(DATASET_NAME))
+            WaveGANUtils.LOGGER.error("Please download DATASET '{}' and put it under current path !".format(DATASET_NAME))
 
         # Random shuffle the audio_path_list for splitting.
         random.shuffle(audio_path_list)

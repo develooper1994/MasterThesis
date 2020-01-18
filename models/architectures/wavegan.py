@@ -5,26 +5,26 @@ import time
 import torch
 from torch import autograd
 
-from models.DataLoader.custom_DataLoader import split_manage_data
+from models.DataLoader.AudioDataset import AudioDataset
 # my modules
 from models.losses.BaseLoss import wassertein_loss
 from models.utils import BasicUtils as utls_basic
 from models.utils.BasicUtils import Parameters, require_net_update, numpy_to_var, calc_gradient_penalty, \
-    prevent_net_update, cuda, creat_dump, compute_and_record_batch_history, save_avg_cost_one_epoch, device
-from models.utils.WaveGAN_utils import WaveGAN_utils
-from models.utils.logger import logger
+    prevent_net_update, cuda, creat_dump, compute_and_record_batch_history, save_avg_cost_one_epoch
+from models.utils.WaveGANUtils import WaveGANUtils
+from models.utils.file_logger import file_logger
 from models.utils.visualization.visualization import plot_loss
 
-from models.DataLoader.AudioDataset import AudioDataset
+WaveGANUtils = WaveGANUtils()
 
-WaveGAN_utils = WaveGAN_utils()
+cuda = True if torch.cuda.is_available() else False
+device = torch.device("cuda" if cuda else "cpu")
 
 
 class WaveGAN:
     def __init__(self):
-        self.Logger = logger()
+        self.Logger = file_logger()
         self.Logger.start()
-
 
         # =============Set Parameters===============
         arguments = Parameters(False)
@@ -36,13 +36,13 @@ class WaveGAN:
         self.dataset = AudioDataset(input_dir=audio_dir, output_dir=self.output_dir)
 
         # network
-        self.netG, self.netD = WaveGAN_utils.create_network(self.model_size, self.ngpus, self.latent_dim, device)
+        self.netG, self.netD = WaveGANUtils.create_network(self.model_size, self.ngpus, self.latent_dim)
 
         # "Two time-scale update rule"(TTUR) to update netD 4x faster than netG.
-        self.optimizerG, self.optimizerD = WaveGAN_utils.optimizers(arguments)
+        self.optimizerG, self.optimizerD = WaveGANUtils.optimizers(arguments)
 
         # Sample noise used for generated output.
-        self.sample_noise = WaveGAN_utils.sample_noise(arguments, self.latent_dim, device)
+        self.sample_noise = WaveGANUtils.sample_noise(arguments, self.latent_dim, device)
 
         # Save config.
         self.Logger.save_configurations()
@@ -51,7 +51,8 @@ class WaveGAN:
         # Load data.
         self.Logger.loading_data()
         # self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = split_manage_data(audio_dir, arguments, self.batch_size)
-        self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = self.dataset.split_manage_data(arguments, self.batch_size)
+        self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = self.dataset.split_manage_data(arguments,
+                                                                                                          self.batch_size)
 
         self.D_cost_train, self.D_wass_train = 0, 0
 
@@ -103,7 +104,7 @@ class WaveGAN:
 
             # Generate audio samples.
             if epoch % self.epochs_per_sample == 0:
-                WaveGAN_utils.generate_audio_samples(self.Logger, self.sample_noise, epoch, self.output_dir)
+                WaveGANUtils.generate_audio_samples(self.Logger, self.sample_noise, epoch, self.output_dir)
 
                 # TODO: Early stopping by Inception Score(IS)
 
@@ -135,7 +136,7 @@ class WaveGAN:
         noise = torch.Tensor(self.batch_size, self.latent_dim).uniform_(-1, 1)
         noise = noise.to(device)
         noise.requires_grad = False  # noise_Var = Variable(noise, requires_grad=False)
-        real_data_Var = numpy_to_var(next(self.train_iter)['X'], device)
+        real_data_Var = numpy_to_var(next(self.train_iter)['X'])
         # a) compute loss contribution from real training data
         D_real = self.netD(real_data_Var)
         D_real = D_real.mean()  # avg loss
@@ -159,7 +160,7 @@ class WaveGAN:
     def compute_valid_data(self, noise, D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch):
         self.netD.zero_grad()
 
-        valid_data_Var = numpy_to_var(next(self.valid_iter)['X'], device)
+        valid_data_Var = numpy_to_var(next(self.valid_iter)['X'])
         D_real_valid = self.netD(valid_data_Var)
         D_real_valid = D_real_valid.mean()  # avg loss
 
@@ -221,8 +222,6 @@ class WaveGAN:
 
     # def __call__(self, *args, **kwargs):
     #     self.train()
-
-
 
 
 """
