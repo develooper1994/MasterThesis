@@ -75,6 +75,30 @@ def numpy_to_var(numpy_data):
     return data
 
 
+def get_params():
+    arguments = Parameters(False)
+    arguments = arguments.args
+    epochs = arguments['num_epochs']
+    batch_size = arguments['batch_size']
+    latent_dim = arguments['latent_dim']
+    ngpus = arguments['ngpus']
+    model_size = arguments['model_size']
+    model_dir = make_path(os.path.join(arguments['output_dir'],
+                                       datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+    arguments['model_dir'] = model_dir
+    # save samples for every N epochs.
+    epochs_per_sample = arguments['epochs_per_sample']
+    # gradient penalty regularization factor.
+    lmbda = arguments['lmbda']
+
+    # Dir
+    audio_dir = arguments['input_dir']
+    output_dir = arguments['output_dir']
+
+    return epochs, batch_size, latent_dim, ngpus, model_size, model_dir, \
+           epochs_per_sample, lmbda, audio_dir, output_dir, arguments
+
+
 class Parameters:
     def __init__(self, konsol=False, args={}):
         self.args = {
@@ -160,29 +184,6 @@ class Parameters:
             args = self.args
 
         return args
-
-    def get_params(self):
-        arguments = Parameters(False)
-        arguments = arguments.args
-        epochs = arguments['num_epochs']
-        batch_size = arguments['batch_size']
-        latent_dim = arguments['latent_dim']
-        ngpus = arguments['ngpus']
-        model_size = arguments['model_size']
-        model_dir = make_path(os.path.join(arguments['output_dir'],
-                                           datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
-        arguments['model_dir'] = model_dir
-        # save samples for every N epochs.
-        epochs_per_sample = arguments['epochs_per_sample']
-        # gradient penalty regularization factor.
-        lmbda = arguments['lmbda']
-
-        # Dir
-        audio_dir = arguments['input_dir']
-        output_dir = arguments['output_dir']
-
-        return epochs, batch_size, latent_dim, ngpus, model_size, model_dir, \
-               epochs_per_sample, lmbda, audio_dir, output_dir
 
     def __call__(self, *args, **kwargs):
         """

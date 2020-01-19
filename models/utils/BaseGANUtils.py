@@ -5,12 +5,19 @@ from torch import optim
 # from models.utils.utils import Logger
 
 # File Logger Configfuration
-from models.utils.BasicUtils import parallel_models
+from models.utils.BasicUtils import parallel_models, Parameters
+
 
 class BaseGANUtils:
     def __init__(self, Generator, Discriminator):
         self.netG = Generator
         self.netD = Discriminator
+
+        # =============Set Parameters===============
+        # arguments = Parameters(False)
+        # self.epochs, self.batch_size, self.latent_dim, self.ngpus, self.model_size, self.model_dir, \
+        # self.epochs_per_sample, self.lmbda, audio_dir, self.output_dir = arguments.get_params()
+        # self.arguments = arguments.args
 
     def create_network(self, model_size, ngpus, latent_dim):
         self.netG = self.netG(model_size=model_size, ngpus=ngpus, latent_dim=latent_dim, upsample=True)

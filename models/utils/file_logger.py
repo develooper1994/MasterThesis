@@ -20,8 +20,8 @@ def init_console_logger(logger, verbose=False):
 
 
 class file_logger:
-    def __init__(self):
-        self.LOGGER = logging.getLogger('wavegan')
+    def __init__(self, GAN_name: str = 'wavegan'):
+        self.LOGGER = logging.getLogger(GAN_name)
         self.LOGGER.setLevel(logging.DEBUG)
 
         self.LOGGER.info('Initialized file_logger.')

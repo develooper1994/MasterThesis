@@ -15,34 +15,34 @@ from models.utils.WaveGANUtils import WaveGANUtils
 from models.utils.file_logger import file_logger
 from models.utils.visualization.visualization import plot_loss
 
-WaveGANUtils = WaveGANUtils()
+wave_gan_utils = WaveGANUtils()
 
 cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda" if cuda else "cpu")
 
 
-class WaveGAN:
+class WaveGAN_standalone:
     def __init__(self):
-        self.Logger = file_logger()
+        self.Logger = file_logger('wavegan')
         self.Logger.start()
 
         # =============Set Parameters===============
         arguments = Parameters(False)
         self.epochs, self.batch_size, self.latent_dim, self.ngpus, self.model_size, self.model_dir, \
-        self.epochs_per_sample, self.lmbda, audio_dir, self.output_dir = arguments.get_params()
+        self.epochs_per_sample, self.lmbda, audio_dir, self.output_dir = get_params()
         arguments = arguments.args
 
         # Dataset
         self.dataset = AudioDataset(input_dir=audio_dir, output_dir=self.output_dir)
 
         # network
-        self.netG, self.netD = WaveGANUtils.create_network(self.model_size, self.ngpus, self.latent_dim)
+        self.netG, self.netD = wave_gan_utils.create_network(self.model_size, self.ngpus, self.latent_dim)
 
         # "Two time-scale update rule"(TTUR) to update netD 4x faster than netG.
-        self.optimizerG, self.optimizerD = WaveGANUtils.optimizers(arguments)
+        self.optimizerG, self.optimizerD = wave_gan_utils.optimizers(arguments)
 
         # Sample noise used for generated output.
-        self.sample_noise = WaveGANUtils.sample_noise(arguments, self.latent_dim, device)
+        self.sample_noise = wave_gan_utils.sample_noise(self.latent_dim, device)
 
         # Save config.
         self.Logger.save_configurations()
@@ -50,10 +50,10 @@ class WaveGAN:
 
         # Load data.
         self.Logger.loading_data()
-        # self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = split_manage_data(audio_dir, arguments, self.batch_size)
         self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = self.dataset.split_manage_data(arguments,
                                                                                                           self.batch_size)
 
+        # collect cost information
         self.D_cost_train, self.D_wass_train = 0, 0
 
         self.history, self.G_costs = [], []
@@ -104,7 +104,7 @@ class WaveGAN:
 
             # Generate audio samples.
             if epoch % self.epochs_per_sample == 0:
-                WaveGANUtils.generate_audio_samples(self.Logger, self.sample_noise, epoch, self.output_dir)
+                wave_gan_utils.generate_audio_samples(self.Logger, self.sample_noise, epoch, self.output_dir)
 
                 # TODO: Early stopping by Inception Score(IS)
 
@@ -186,7 +186,7 @@ class WaveGAN:
         self.netG.zero_grad()
 
         # Noise
-        noise = torch.Tensor(self.batch_size, self.latent_dim).uniform_(-1, 1)
+        noise = torch.tensor(self.batch_size, self.latent_dim).uniform_(-1, 1)
         noise = noise.to(device)
         noise.requires_grad = False  # noise_Var = Variable(noise, requires_grad=False)
 
@@ -219,9 +219,6 @@ class WaveGAN:
         # Plot loss curve.
         plot_loss(self.D_costs_train, self.D_wasses_train,
                   self.D_costs_valid, self.D_wasses_valid, self.G_costs, self.output_dir)
-
-    # def __call__(self, *args, **kwargs):
-    #     self.train()
 
 
 """

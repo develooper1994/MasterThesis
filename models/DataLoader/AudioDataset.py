@@ -12,8 +12,8 @@ from torchaudio import datasets, transforms
 
 from config import DATASET_NAME, OUTPUT_PATH, SAMPLE_NUM, WINDOW_LENGHT, FS, EPOCHS
 from models.utils.BasicUtils import make_path
-# from models.utils.WaveGANUtils import LOGGER as L  # ImportError: cannot import name 'LOGGER' from
-# 'models.utils.WaveGANUtils'
+# from models.utils.wave_gan_utils import LOGGER as L  # ImportError: cannot import name 'LOGGER' from
+# 'models.utils.wave_gan_utils'
 from models.utils.WaveGANUtils import WaveGANUtils
 
 
