@@ -1,12 +1,12 @@
 # from models.wavegan import WaveGAN
-from models.DataLoader.AudioDataset import AudioDataset
-from models.architectures.WaveGAN_standalone import WaveGAN_standalone
+from typing import NoReturn
 
+from models.DataLoader.AudioDataset import AudioDataset
 from models.GANSelector import GANSelector
 from models.Trainers.DefaultTrainer import audio_dir, output_dir
 
 
-def main():
+def main() -> NoReturn:
     # TODO: Implement for all gan types
     # wavegan = WaveGAN()
     # wavegan.train()

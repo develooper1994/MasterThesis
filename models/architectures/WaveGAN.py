@@ -1,19 +1,11 @@
 # Standart library
-import time
 
 # torch imports
-import torch
-from torch import autograd
 
-from models.DataLoader.AudioDataset import AudioDataset
 # my modules
-from models.losses.BaseLoss import wassertein_loss
-from models.utils import BasicUtils as utls_basic
-from models.utils.BasicUtils import get_params, require_net_update, numpy_to_var, calc_gradient_penalty, \
-    prevent_net_update, cuda, creat_dump, compute_and_record_batch_history, save_avg_cost_one_epoch, device
+from models.utils.BasicUtils import get_params, creat_dump, device
 from models.utils.WaveGANUtils import WaveGANUtils
 from models.utils.file_logger import file_logger
-from models.utils.visualization.visualization import plot_loss
 
 wave_gan_utils = WaveGANUtils()
 
@@ -31,7 +23,7 @@ class WaveGAN:
         self.netG, self.netD = wave_gan_utils.create_network(self.model_size, self.ngpus, self.latent_dim)
 
         # "Two time-scale update rule"(TTUR) to update netD 4x faster than netG.
-        self.optimizerG, self.optimizerD = wave_gan_utils.optimizers(arguments)
+        self.optimizerD, self.optimizerG = wave_gan_utils.optimizers(arguments)
 
         # Sample noise used for generated output.
         self.sample_noise = wave_gan_utils.sample_noise(arguments, self.latent_dim, device)
@@ -79,14 +71,14 @@ class WaveGAN:
     #             #############################
     #             # (1.1) Train Discriminator 1 times
     #             #############################
-    #             self._train_epoch(D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
+    #             self.train_discriminator(D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
     #                               n_discriminate_train, neg_one, one)
     #
     #             #############################
     #             # (3) Train Generator
     #             #############################
     #             # Prevent discriminator update.
-    #             self.train_generator(neg_one, G_cost_epoch, start, epoch, i)
+    #             self.train_generator_once(neg_one, G_cost_epoch, start, epoch, i)
     #
     #         # Save the average cost of batches in every epoch.
     #         save_avg_cost_one_epoch(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch,
@@ -110,7 +102,7 @@ class WaveGAN:
     #
     #     self.Logger.end()
     #
-    # def _train_epoch(self, D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
+    # def train_discriminator(self, D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
     #                  n_discriminate_train, neg_one, one):
     #     for _ in range(n_discriminate_train):  # train discriminator more than generator by (default)5
     #         noise = self.train_discriminator_once(neg_one, one)
@@ -171,7 +163,7 @@ class WaveGAN:
     #                                      D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch,
     #                                      D_wass_valid_epoch)
     #
-    # def train_generator(self, neg_one, G_cost_epoch, start, epoch, i):
+    # def train_generator_once(self, neg_one, G_cost_epoch, start, epoch, i):
     #     prevent_net_update(self.netD)
     #
     #     # Reset generator gradients

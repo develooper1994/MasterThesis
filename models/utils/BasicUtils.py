@@ -7,14 +7,16 @@ import os
 import pickle
 import time
 
-import numpy as np
-# 3'rd party
 import torch
-# my libraries
+from torch import nn
 from torch import autograd
 
+# my libraries
 from config import DATASET_NAME, OUTPUT_PATH, EPOCHS, BATCH_SIZE, SAMPLE_EVERY, SAMPLE_NUM
 from models.losses.BaseLoss import wassertein_loss
+
+# 3'rd party
+import numpy as np
 
 cuda = True if torch.cuda.is_available() else False
 global device
@@ -22,6 +24,7 @@ device = torch.device("cuda" if cuda else "cpu")
 print("Training device: {}".format(device))
 
 
+## the basic useful utilities
 def make_path(output_path):
     """
     Create folder
@@ -75,6 +78,7 @@ def numpy_to_var(numpy_data):
     return data
 
 
+## catch up parameters from command-line
 def get_params():
     arguments = Parameters(False)
     arguments = arguments.args
@@ -198,6 +202,7 @@ class Parameters:
         return str(self.args)
 
 
+## gradient penalty for wgan-gp (wasserstein divergence)
 # TODO: replace with torchaudio
 # Adapted from https://github.com/caogang/wgan-gp/blob/master/gan_toy.py
 def calc_gradient_penalty(netD, real_data, fake_data, batch_size, lmbda, device="cuda"):
@@ -236,19 +241,12 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, lmbda, device=
     return gradient_penalty
 
 
+## save models and create a dump
 def save_models(output_dir, netD, netG):
     netD_path = os.path.join(output_dir, "discriminator.pkl")
     netG_path = os.path.join(output_dir, "generator.pkl")
     torch.save(netD.state_dict(), netD_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
     torch.save(netG.state_dict(), netG_path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
-
-
-def parallel_models(*nets):
-    net = []
-    for n in nets:
-        n = torch.nn.DataParallel(n).to(device)
-        net.append(n)
-    return net
 
 
 def creat_dump(model_dir, arguments):
@@ -257,6 +255,16 @@ def creat_dump(model_dir, arguments):
         json.dump(arguments, f)
 
 
+## make it parallel
+def parallel_models(*nets):
+    net = []
+    for n in nets:
+        n = torch.nn.DataParallel(n).to(device)
+        net.append(n)
+    return net
+
+
+## to ... device
 def tocuda_all(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
     D_cost_train = D_cost_train.cuda()
     D_wass_train = D_wass_train.cuda()
@@ -273,6 +281,7 @@ def tocpu_all(D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
     return D_cost_train, D_wass_train, D_cost_valid, D_wass_valid
 
 
+## save and record cost or loss
 def record_costs(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch,
                  D_cost_train, D_wass_train, D_cost_valid, D_wass_valid):
     D_cost_train_epoch.append(D_cost_train.data.numpy())
@@ -283,7 +292,6 @@ def record_costs(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_w
 
 def compute_and_record_batch_history(D_fake_valid, D_real_valid, D_cost_train, D_wass_train, gradient_penalty_valid,
                                      D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch):
-
     # validation loss
     # D_cost_valid = D_fake_valid - D_real_valid + gradient_penalty_valid
     # D_wass_valid = D_real_valid - D_fake_valid
@@ -315,3 +323,130 @@ def save_avg_cost_one_epoch(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid
 
     Logger.batch_loss(start, D_cost_train_epoch_avg, D_wass_train_epoch_avg,
                       D_cost_valid_epoch_avg, D_wass_valid_epoch_avg, G_cost_epoch_avg)
+
+
+## weight initalization
+def weights_init(self):
+    """
+    - Tanh/Sigmoid vanishing gradients can be solved with "Xavier initialization" -> keras default
+        -- Good range of constant variance
+    - ReLU/Leaky ReLU exploding gradients can be solved with "Kaiming He initialization"
+        -- Good range of constant variance
+    note: Pytorch uses lecun initialization by default - "Yann Lecun"
+    """
+    # cifar10 dataset convert weight distribution to normal(gaussian like) distribution.
+    # normal distributions are more
+    for module in self.net.modules():
+        if isinstance(module, nn.Conv2d):
+            nn.init.xavier_uniform_(module.weight)  # xavier_normal_, xavier_uniform_, kaiming_normal_, kaiming_uniform_
+            nn.init.constant_(module.bias, 0)
+        if isinstance(module, nn.Linear):
+            nn.init.xavier_uniform_(module.weight)  # xavier_normal_, xavier_uniform_, kaiming_normal_, kaiming_uniform_
+            nn.init.constant_(module.bias, 0)
+
+## print info
+    def print_all(self, epoch):
+        print("Epoch: {}/{}.. ".format(epoch + 1, self.epochs),
+              "steps: {}.. ".format(self.steps + 1),
+              "learning rate: {} ".format(self.get_lr_()),
+              "Train loss: {0:.3f}.. ".format(self.running_loss / self.print_every),
+              "Train accuracy: {0:.3f}".format(self.train_accuracy / self.print_every),
+              "Test loss: {0:.3f}.. ".format(self.test_loss / len(self.testloader)),
+              "Test accuracy: {0:.3f}".format(self.test_accuracy / len(self.testloader))
+              )
+
+    def print_net(self):
+        print(self.net)
+
+## accuracy
+    def accuracy_(self, outputs, labels):
+        top_p, top_class = outputs.topk(1, dim=1)
+        equals = top_class == labels.view(*top_class.shape)
+        if self.device == "cpu":
+            accuracy = torch.mean(equals.type(torch.FloatTensor))
+        else:
+            accuracy = torch.mean(equals.type(torch.cuda.FloatTensor))
+        return accuracy
+
+    def accuracy2_(self, outputs, labels):
+        correct = 0
+        total = 0
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).squeeze().sum().item()
+        accuracy = correct / total
+        return accuracy
+
+## save and load model
+    def model_save(self, PATH):
+        return torch.save(self.net.state_dict(), PATH)
+
+    def model_load_(self, PATH):
+        "loading network itself"
+        return self.net.load_state_dict(torch.load(PATH))
+
+    def model_load(self, PATH):
+        "loading network to another network"
+        return torch.load(PATH)
+
+
+## get possibilities
+def evaluate(self, data):
+    return self.net(data)
+
+
+## getters
+# data getters
+
+class data_getters:
+    @staticmethod
+    def get_one_iter(loader):
+        dataiter = iter(loader)
+        images, labels = dataiter.next()
+        return images, labels
+
+    @staticmethod
+    def get_first_data(loader):
+        images, labels = data_getters.get_one_iter(loader)
+        return images[0], labels[0]
+
+    @staticmethod
+    def get_first_train_data(trainloader):
+        return data_getters.get_first_data(trainloader)
+
+    @staticmethod
+    def get_first_test_data(testloader):
+        return data_getters.get_first_data(testloader)
+
+    @staticmethod
+    def get_data_shape():
+        # returns torch shape
+        image, label = data_getters.get_first_train_data()
+        return image.shape, label.shape
+
+    @staticmethod
+    # class parameter getters
+    def get_lr_(optimizer):
+        for param_group in optimizer.param_groups:
+            return param_group['lr']
+
+    @staticmethod
+    def get_training_info(optimizer, running_loss, test_loss, testloader,
+                          test_accuracy, train_accuracy, print_every):
+        return {
+            "lr": data_getters.get_lr_(optimizer),
+            "loss": {"train": running_loss / print_every, "test": test_loss / len(testloader)},
+            "accuracy": {"train": train_accuracy / print_every,
+                         "test": test_accuracy / len(testloader)}
+        }
+## transforms
+def torch_image_to_numpy_image(torch_img):
+    # torch -> C(channel), H(height), W(width)
+    # numpy -> H(height), W(width), C(channel)
+    # PIL -> H(height), W(width)
+    numpy_img = torch_img.numpy()
+    return np.transpose(numpy_img, (1, 2, 0))
+    # torch_img = torchvision.transforms.ToPILImage()(torch_img)
+
+def rgb2gray(rgb):
+    return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])

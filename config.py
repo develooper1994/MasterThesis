@@ -17,3 +17,4 @@ OUTPUT_PATH = "output/"
 
 # Model(Network)
 MODEL = "wavegan"
+# if you want to change optimizers look at models.optimizers.BaseOptimizer.py

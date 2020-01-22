@@ -1,23 +1,26 @@
 # inspired from https://github.com/EmilienDupont/wgan-gp/blob/master/training.py
 # Standart library
 import time
+from typing import NoReturn
 
 # torch modules
 import torch
 from torch import autograd
 
+from models.Trainers.TrainingUtility import TrainingUtility
 # from models.GANSelector import epochs, batch_size, latent_dim, epochs_per_sample, lmbda, output_dir, arguments
 # my modules
 from models.architectures.WaveGAN import wave_gan_utils
 from models.losses.BaseLoss import wassertein_loss
-from models.utils import BasicUtils as utls_basic
+from models.utils.BasicUtils import get_params
 from models.utils.BasicUtils import require_net_update, numpy_to_var, calc_gradient_penalty, \
     prevent_net_update, cuda, compute_and_record_batch_history, save_avg_cost_one_epoch, device
-from models.utils.visualization.visualization import plot_loss
-from models.utils.BasicUtils import Parameters, get_params
 
 # 3rd party modules
 
+
+torch.set_printoptions(linewidth=120)
+torch.set_grad_enabled(True)  # On by default, leave it here for clarity
 
 # =============Set Parameters===============
 epochs, batch_size, latent_dim, ngpus, model_size, model_dir, \
@@ -62,48 +65,7 @@ class DefaultTrainer:
         # =============Train===============
         start = time.time()
         self.GAN.Logger.start_training(epochs, batch_size, self.BATCH_NUM)
-        for epoch in range(1, epochs + 1):
-            # self.GAN.Logger.info("{} Epoch: {}/{}".format(time_since(start), epoch, self.epochs))
-            self.GAN.Logger.epoch_info(start, epoch, epochs)
-
-            D_cost_train_epoch, D_wass_train_epoch = [], []
-            D_cost_valid_epoch, D_wass_valid_epoch = [], []
-            G_cost_epoch = []
-            for i in range(1, self.BATCH_NUM + 1):
-                #############################
-                # (1) Train Discriminator (n_discriminate_train times)
-                #############################
-                # Set Discriminators parameters to require gradients.
-                require_net_update(self.D)
-
-                one = torch.tensor(1, dtype=torch.float)
-                neg_one = torch.tensor(-1, dtype=torch.float)
-                one = one.to(device)
-                neg_one = neg_one.to(device)
-
-                #############################
-                # (1.1) Train Discriminator 1 times
-                #############################
-                self._train_epoch(D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
-                                  self.critic_iterations, neg_one, one)
-
-                #############################
-                # (3) Train Generator
-                #############################
-                # Prevent discriminator update.
-                self.train_generator(neg_one, G_cost_epoch, start, epoch, i)
-
-            # Save the average cost of batches in every epoch.
-            save_avg_cost_one_epoch(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch,
-                                    G_cost_epoch,
-                                    self.D_costs_train, self.D_wasses_train, self.D_costs_valid,
-                                    self.D_wasses_valid, self.G_costs, self.GAN.Logger, start)
-
-            # Generate audio samples.
-            if epoch % epochs_per_sample == 0:
-                wave_gan_utils.generate_audio_samples(self.GAN.Logger, self.sample_noise, epoch, output_dir)
-
-                # TODO: Early stopping by Inception Score(IS)
+        self.train_all_epochs(start)
 
         self.GAN.Logger.training_finished()
 
@@ -115,8 +77,87 @@ class DefaultTrainer:
 
         self.GAN.Logger.end()
 
-    def _train_epoch(self, D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
-                     n_discriminate_train, neg_one, one):
+    def train_all_epochs(self, start):
+        for epoch in range(1, epochs + 1):
+            self.train_one_epoch(epoch, start)
+
+    def train_one_epoch(self, epoch, start):
+        # self.GAN.Logger.info("{} Epoch: {}/{}".format(time_since(start), epoch, self.epochs))
+        self.GAN.Logger.epoch_info(start, epoch, epochs)
+        D_cost_train_epoch, D_wass_train_epoch = [], []
+        D_cost_valid_epoch, D_wass_valid_epoch = [], []
+        G_cost_epoch = []
+        # for i in range(1, self.BATCH_NUM + 1):
+        #     # #############################
+        #     # # (1) Train Discriminator (n_discriminate_train times)
+        #     # #############################
+        #     # # Set Discriminators parameters to require gradients.
+        #     # require_net_update(self.D)
+        #     #
+        #     # one = torch.tensor(1, dtype=torch.float)
+        #     # neg_one = torch.tensor(-1, dtype=torch.float)
+        #     # one = one.to(device)
+        #     # neg_one = neg_one.to(device)
+        #     #
+        #     # #############################
+        #     # # (1.1) Train Discriminator 1 times
+        #     # #############################
+        #     # self.train_discriminator(D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
+        #     #                          self.critic_iterations, neg_one, one)
+        #     #
+        #     # #############################
+        #     # # (3) Train Generator
+        #     # #############################
+        #     # # Prevent discriminator update.
+        #     # self.train_generator_once(neg_one, G_cost_epoch, start, epoch, i)
+        #     self.train_gan_one_batch(D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
+        #                              G_cost_epoch, start, epoch, i)
+        self.train_gan_all_batches(D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
+                                   G_cost_epoch, start, epoch)
+        # Save the average cost of batches in every epoch.
+        save_avg_cost_one_epoch(D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch,
+                                G_cost_epoch,
+                                self.D_costs_train, self.D_wasses_train, self.D_costs_valid,
+                                self.D_wasses_valid, self.G_costs, self.GAN.Logger, start)
+        # Generate audio samples.
+        if epoch % epochs_per_sample == 0:
+            wave_gan_utils.generate_audio_samples(self.GAN.Logger, self.sample_noise, epoch, output_dir)
+
+            # TODO: Early stopping by Inception Score(IS)
+
+    def train_gan_all_batches(self, D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
+                              G_cost_epoch, start, epoch):
+        for i in range(1, self.BATCH_NUM + 1):
+            self.train_gan_one_batch(D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
+                                     G_cost_epoch, start, epoch, i)
+
+    def train_gan_one_batch(self, D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
+                            G_cost_epoch, start, epoch, i):
+        #############################
+        # (1) Train Discriminator (n_discriminate_train times)
+        #############################
+        # Set Discriminators parameters to require gradients.
+        require_net_update(self.D)
+
+        one = torch.tensor(1, dtype=torch.float)
+        neg_one = torch.tensor(-1, dtype=torch.float)
+        one = one.to(device)
+        neg_one = neg_one.to(device)
+
+        #############################
+        # (1.1) Train Discriminator 1 times
+        #############################
+        self.train_discriminator(D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
+                                 self.critic_iterations, neg_one, one)
+
+        #############################
+        # (3) Train Generator
+        #############################
+        # Prevent discriminator update.
+        self.train_generator_once(neg_one, G_cost_epoch, start, epoch, i)
+
+    def train_discriminator(self, D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
+                            n_discriminate_train, neg_one, one):
         for _ in range(n_discriminate_train):  # train discriminator more than generator by (default)5
             noise = self.train_discriminator_once(neg_one, one)
 
@@ -176,7 +217,7 @@ class DefaultTrainer:
                                          D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch,
                                          D_wass_valid_epoch)
 
-    def train_generator(self, neg_one, G_cost_epoch, start, epoch, i):
+    def train_generator_once(self, neg_one, G_cost_epoch, start, epoch, i):
         prevent_net_update(self.D)
 
         # Reset generator gradients
@@ -205,17 +246,9 @@ class DefaultTrainer:
         if i % (self.BATCH_NUM // 5) == 0:
             self.GAN.Logger.batch_info(start, epoch, i, self.BATCH_NUM, self.D_cost_train, self.D_wass_train, G_cost)
 
-    def last_touch(self) -> None:
-        """
-        Last process to end up training. Do it what do you want. Visualization, early stopping, checkpoint of models,
-        calculate metrics, ...
-        :return: None
-        """
-        utls_basic.save_models(output_dir, self.D, self.G)
-        self.GAN.Logger.save_loss_curve()
-        # Plot loss curve.
-        plot_loss(self.D_costs_train, self.D_wasses_train,
-                  self.D_costs_valid, self.D_wasses_valid, self.G_costs, output_dir)
+    def last_touch(self) -> NoReturn:
+        TrainingUtility.last_touch(self.GAN, self.D, self.G, output_dir, self.D_costs_train, self.D_wasses_train,
+                                   self.D_costs_valid, self.D_wasses_valid, self.G_costs)
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Don't REMOVE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # def _critic_train_iteration(self, data):
@@ -291,8 +324,8 @@ class DefaultTrainer:
     #     # Return gradient penalty
     #     return self.gp_weight * ((gradients_norm - 1) ** 2).mean()
     #
-    # def _train_epoch(self, data_loader):
-    # # def _train_epoch(self, data_loader):
+    # def train_discriminator(self, data_loader):
+    # # def train_discriminator(self, data_loader):
     #     # for i, data in enumerate(data_loader):
     #     for i, data in enumerate(self.train_iter):
     #         self.num_steps += 1
@@ -319,8 +352,8 @@ class DefaultTrainer:
     #
     #     for epoch in range(epochs):
     #         print("\nEpoch {}".format(epoch + 1))
-    #         # self._train_epoch(data_loader)
-    #         self._train_epoch()
+    #         # self.train_discriminator(data_loader)
+    #         self.train_discriminator()
     #
     #         if save_training_gif:
     #             # Generate batch of images and convert to grid

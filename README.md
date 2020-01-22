@@ -1,6 +1,7 @@
 # This repository is not a full package yet.
 
 # ! TODO: Title
+# GAN LAB - version 0.1
 PyTorch implementation of [!TODO: link]()
 
 Before running, make sure you have the `sc09` dataset, and put that dataset into 

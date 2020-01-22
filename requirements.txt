@@ -1,7 +1,8 @@
 numpy
+pandas
+matplotlib
 librosa
 pescador
-matplotlib
 
 torch
 torchaudio

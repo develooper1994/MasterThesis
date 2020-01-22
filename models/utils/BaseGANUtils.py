@@ -1,23 +1,17 @@
 import torch
 from torch import optim
 
-# TODO: write document for each function.
-# from models.utils.utils import Logger
-
 # File Logger Configfuration
-from models.utils.BasicUtils import parallel_models, Parameters
+from models.utils.BasicUtils import parallel_models
+from models.optimizers.BaseOptimizer import optimizers
+
+# TODO: write document for each function.
 
 
 class BaseGANUtils:
     def __init__(self, Generator, Discriminator):
         self.netG = Generator
         self.netD = Discriminator
-
-        # =============Set Parameters===============
-        # arguments = Parameters(False)
-        # self.epochs, self.batch_size, self.latent_dim, self.ngpus, self.model_size, self.model_dir, \
-        # self.epochs_per_sample, self.lmbda, audio_dir, self.output_dir = arguments.get_params()
-        # self.arguments = arguments.args
 
     def create_network(self, model_size, ngpus, latent_dim):
         self.netG = self.netG(model_size=model_size, ngpus=ngpus, latent_dim=latent_dim, upsample=True)
@@ -27,11 +21,7 @@ class BaseGANUtils:
         return netG, netD
 
     def optimizers(self, arguments):
-        optimizerG = optim.Adam(self.netG.parameters(), lr=arguments['learning-rate'],
-                                betas=(arguments['beta-one'], arguments['beta-two']))
-        optimizerD = optim.Adam(self.netD.parameters(), lr=arguments['learning-rate'],
-                                betas=(arguments['beta-one'], arguments['beta-two']))
-        return optimizerG, optimizerD
+        return optimizers(self.netD, self.netG, arguments)
 
     def sample_noise(self, arguments, latent_dim, device):
         sample_noise = torch.randn(arguments['sample-size'], latent_dim)
