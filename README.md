@@ -14,7 +14,9 @@ If you want to output different directory, change config.py OUTPUT_PATH variable
 ```
 sudo apt-get install libav-tools
 ```
+<b>I reccomend to look at requirements.txt</b>
 
+<br/>
 2.Download dataset
 * `sc09`: [sc09 raw WAV files](http://deepyeti.ucsd.edu/cdonahue/sc09.tar.gz), utterances of spoken english words '0'-'9'
 * `piano`: [Piano raw WAV files](http://deepyeti.ucsd.edu/cdonahue/mancini_piano.tar.gz)

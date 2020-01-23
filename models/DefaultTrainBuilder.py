@@ -5,10 +5,11 @@ from itertools import product  # cartesian product
 import time
 import datetime
 import json
-from typing import List, Any, NoReturn, Union
+from typing import List, Any, NoReturn, Union, Optional
 
 # classical machine learning imports
 import torch
+import torchaudio
 from torch import nn
 from torch.nn import functional as F
 from torch.utils.tensorboard import SummaryWriter
@@ -67,7 +68,10 @@ class Run:
     count: int
     data: List[Any]
 
-    def __init__(self, params=None, count=0, data=[], start_time=None):
+    def __init__(self, params: Union[None, None, None] = None, count: int = 0, data=None,
+                 start_time: Union[None, None, None] = None) -> None:
+        if data is None:
+            data = []
         self.params = params
         self.count = count
         self.data = data
@@ -76,7 +80,7 @@ class Run:
 
 class DefaultRunManager:
     """
-    Controls all learning process functions
+    Controls all learning process functions and utilities like visualization and taking checkpoint
     """
     run: Run
 
@@ -107,9 +111,10 @@ class DefaultRunManager:
         @param network: Pytorch Your neural network class
         @param loader: Pytorch dataloader.
         @return: None
+        :param GAN: Generative Adverserial Network inside of architecture folder
         """
 
-        # self.run.start_time = time.time()
+        self.run.start_time = time.time()
 
         self.run.params = run
         self.run.count += 1
@@ -121,14 +126,15 @@ class DefaultRunManager:
 
         # TODO: Implment Tensorboard visualization in  models.utils.visualization
         # one batch data
-        images, labels = next(iter(self.loader))
-        grid = torchvision.utils.make_grid(images)
+        waveforms, labels = next(iter(self.loader))
+        specgrams = torchaudio.transforms.Spectrogram()(waveforms)  # I don't it will write with iterator
+        grid = torchvision.utils.make_grid(specgrams)
 
         # # Tensorboard configuration
         self.tb = SummaryWriter(comment=f'-{run}')
         self.tb.add_image('images', grid)
-        self.tb.add_graph(self.D, images)
-        self.tb.add_graph(self.G, images)
+        self.tb.add_graph(self.D, specgrams)
+        self.tb.add_graph(self.G, specgrams)
 
     # when run ends, close TensorBoard, zero epoch count
     def end_run(self):
@@ -149,7 +155,7 @@ class DefaultRunManager:
         Configures and gives a start the one epoch experiment.
         @return: None
         """
-        # self.epoch.start_time = time.time()
+        self.epoch.start_time = time.time()
 
         self.epoch.count += 1
         self.epoch.loss = 0
@@ -297,6 +303,7 @@ class DefaultTrainBuilder:
         default: RunBuilder.get_runs(OrderedDict(lr=[.01], batch_size=[1000], shuffle=[True]))[0]
 
         @return: None
+        :param validation:
         """
 
         # if validation:
