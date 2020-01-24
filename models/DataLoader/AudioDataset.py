@@ -142,7 +142,7 @@ class AudioDataset(Dataset):
             sample = sample.astype('float32')
             assert not np.any(np.isnan(sample))
 
-            yield {'X': sample}
+            yield {'X': sample}  # TODO: insert label info into dict.
 
     def batch_generator(self, audio_path_list, batch_size):
         """

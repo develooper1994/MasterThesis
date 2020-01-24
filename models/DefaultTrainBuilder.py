@@ -126,6 +126,7 @@ class DefaultRunManager:
 
         # TODO: Implment Tensorboard visualization in  models.utils.visualization
         # one batch data
+        # TODO: label info not completed
         waveforms, labels = next(iter(self.loader))
         specgrams = torchaudio.transforms.Spectrogram()(waveforms)  # I don't it will write with iterator
         grid = torchvision.utils.make_grid(specgrams)
