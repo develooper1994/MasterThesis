@@ -94,10 +94,10 @@ class DefaultRunManager:
         self.run = Run()
 
         # record model, loader and TensorBoard
-        self.network = None
-        self.GAN = None
-        self.D = None
-        self.G = None
+        # self.network = None
+        # self.GAN = None
+        # self.D = None
+        # self.G = None
         self.loader = None
         self.tb = None
 
@@ -120,8 +120,8 @@ class DefaultRunManager:
         self.run.count += 1
 
         self.GAN = GAN
-        self.D = self.GAN.D
-        self.G = self.GAN.G
+        self.D = self.GAN.netD
+        self.G = self.GAN.netG
         self.loader = loader
 
         # TODO: Implment Tensorboard visualization in  models.utils.visualization
@@ -271,9 +271,9 @@ class DefaultTrainBuilder:
     def __init__(self) -> NoReturn:
         self.m = DefaultRunManager()  # m indicates manager
         self.number_of_experiments = 0
-        self.network = None
-        self.D = None
-        self.G = None
+        # self.network = None
+        # self.D = None
+        # self.G = None
         self.optimizerD = None
         self.optimizerG = None
         self.epochs = 1
@@ -373,7 +373,7 @@ class DefaultTrainBuilder:
             # self.all_epochs(loader)
             self.m.end_run()
 
-    def wrap_experiments(self, params, data_sets, epochs, validation=False) -> NoReturn:
+    def wrap_experiments(self, params, data_sets, epochs: int, validation=False) -> NoReturn:
         """
         Put all to gather
         @param params: hyperparameters for experiment

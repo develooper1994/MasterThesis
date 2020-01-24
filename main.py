@@ -1,9 +1,11 @@
 # from models.wavegan import WaveGAN
 from typing import NoReturn
+from collections import OrderedDict
 
 from models.DataLoader.AudioDataset import AudioDataset
 from models.GANSelector import GANSelector
 from models.Trainers.DefaultTrainer import audio_dir, output_dir
+from config import params
 
 
 def main() -> NoReturn:
@@ -14,7 +16,8 @@ def main() -> NoReturn:
     # Dataset
     dataloader = AudioDataset(input_dir=audio_dir, output_dir=output_dir)
     gan_selector = GANSelector("wavegan", dataloader, epochs=1)
-    gan_selector.train()
+    # gan_selector.train()
+    gan_selector.train_experiments(params)
 
 
 if __name__ == "__main__":

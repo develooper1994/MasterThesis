@@ -17,6 +17,7 @@ from models.architectures.WaveGAN import WaveGAN
 
 # utilities for all architectures
 
+
 class GANSelector(DefaultTrainBuilder):
     # def __init__(self, netD, netG) -> None:
     def __init__(self, GAN, data_loader, epochs=1) -> None:
@@ -40,12 +41,16 @@ class GANSelector(DefaultTrainBuilder):
         self.set_nets(self.netD, self.netG)
         self.base_trainer = DefaultTrainer(self.netG, self.netD, self.optimizerG, self.optimizerD, gan_type,
                                            self.data_loader)
+        self.train_loader = self.base_trainer.train_iter
+        self.valid_loader = self.base_trainer.valid_iter
+        self.test_loader = self.base_trainer.test_iter
+        self.dataset = [self.train_loader, self.valid_loader, self.test_loader]
 
     def batches(self, **kwargs) -> NoReturn:
         self.base_trainer.train_gan_one_batch(kwargs)
         self.m.end_epoch()
 
-    def all_epochs(self) -> NoReturn:
+    def all_epochs(self, loader) -> NoReturn:
         start = time.time()
         for epoch in range(1, epochs + 1):
             self.m.begin_epoch()
@@ -54,7 +59,23 @@ class GANSelector(DefaultTrainBuilder):
 
     def train(self):
         # self.base_trainer.train()
-        self.all_epochs()
+        self.all_epochs(self.train_loader)
+
+    def experiments(self, train_set, runs) -> NoReturn:
+        # start experiments with parameters
+        for run in runs:
+            ## Experiments Start ##
+
+            self.m.begin_run(run, gan_type, self.train_loader)
+            self.all_epochs(self.train_loader)
+            ## Experiments End ##
+            self.m.end_run()
+
+    def wrap_experiments(self,  params, data_sets, epochs: int, validation=False) -> NoReturn:
+        super(GANSelector, self).wrap_experiments(params, data_sets, epochs, validation=False)
+
+    def train_experiments(self, params):
+        self.wrap_experiments(params=params, data_sets=self.dataset, epochs=self.epochs, validation=False)
 
     def set_discriminator(self, netD):
         self.netD = netD

@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 # EmTraining
 EPOCHS = 1  # 1 # 10 # 180
 # NOTE!!!: Bigger BATCH_SIZE; faster training and slower gradient degradation
@@ -18,3 +20,14 @@ OUTPUT_PATH = "output/"
 # Model(Network)
 MODEL = "wavegan"
 # if you want to change optimizers look at models.optimizers.BaseOptimizer.py
+
+
+
+# experiments
+params = OrderedDict(
+        lr=[.01, .001],
+        batch_size=[100, 1000],
+        shuffle=[True, False],
+        # Model(Network)
+        MODEL="wavegan"
+    )

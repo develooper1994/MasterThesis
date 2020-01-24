@@ -28,6 +28,7 @@ class AudioDataset(Dataset):
         self.input_transform = input_transform
 
         self.audio_name_list = self.get_all_audio_filepaths
+        self.audio_label_list = self.get_all_audio_labels
 
     def __len__(self):
         return len(self.audio_name_list)
@@ -70,6 +71,15 @@ class AudioDataset(Dataset):
                 # "or fname.lower().endswith('.mp3')"
                 ]
 
+    @property
+    def get_all_audio_labels(self):
+        # L[0].split('/')[-1].split('_')[0]  # split pattern to get label
+        # one_data.split('/')[-1].split('_')[0]
+        paths = self.audio_name_list
+        return [label.split('/')[-1].split('_')[0]
+                for label in paths]
+
+
     # TODO: replace librosa with torchaudio
     def save_samples(self, epoch, epoch_samples, fs=FS) -> None:
         """
@@ -98,7 +108,8 @@ class AudioDataset(Dataset):
             :type: return type is generator
         """
         try:
-            audio_data, _ = librosa.load(filepath, sr=fs)
+            audio_data, sampling_rate = librosa.load(filepath, sr=fs)
+            # label = L[0].split('/')[-1].split('_')[0]
 
             # Clip magnitude
             max_mag = np.max(np.abs(audio_data))
@@ -141,15 +152,14 @@ class AudioDataset(Dataset):
         :param batch_size: size(lenght) of batch
         :return: generated batch
         """
+        # TODO: Make it closure form to get some speed
         streamers = []
         for audio_path in audio_path_list:
             s = pescador.Streamer(self.sample_generator, audio_path)
             streamers.append(s)
 
         mux = pescador.ShuffledMux(streamers)
-        batch_gen = pescador.buffer_stream(mux, batch_size)
-
-        return batch_gen
+        return pescador.buffer_stream(mux, batch_size)
 
     # TODO: replace with torchaudio
     def split_data(self, audio_path_list, valid_ratio, test_ratio, batch_size):
