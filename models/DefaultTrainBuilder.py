@@ -86,8 +86,12 @@ class DefaultRunManager:
 
     # TODO! make a evaluation method with testloader
     # TODO! split dataset into train, validation(dev) and test
-    def __init__(self):
+    def __init__(self, GAN, loader):
         # tracking every epoch count, loss, accuracy, time
+
+        self.GAN = GAN
+        self.G = GAN.netG
+        self.D = GAN.netD
         self.epoch = Epoch()
 
         # tracking every run count, run data, hyper-params used, time
@@ -98,13 +102,13 @@ class DefaultRunManager:
         # self.GAN = None
         # self.D = None
         # self.G = None
-        self.loader = None
+        self.loader = loader
         self.tb = None
 
     # record the count, hyper-param, model, loader of each run
     # record sample images and network graph to TensorBoard
     # TODO! refactor begin_run and end_run functions
-    def begin_run(self, run, GAN, loader):
+    def begin_run(self, run):
         """
         Configures and gives a start the one experiment.
         @param run: Represents the one experiment. Information comes from RunBuilder class.
@@ -119,23 +123,19 @@ class DefaultRunManager:
         self.run.params = run
         self.run.count += 1
 
-        self.GAN = GAN
-        self.D = self.GAN.netD
-        self.G = self.GAN.netG
-        self.loader = loader
-
         # TODO: Implment Tensorboard visualization in  models.utils.visualization
         # one batch data
         # TODO: label info not completed
         waveforms, labels = next(iter(self.loader))
         specgrams = torchaudio.transforms.Spectrogram()(waveforms)  # I don't it will write with iterator
-        grid = torchvision.utils.make_grid(specgrams)
+        # grid = torchvision.utils.make_grid(specgrams)
 
         # # Tensorboard configuration
         self.tb = SummaryWriter(comment=f'-{run}')
-        self.tb.add_image('images', grid)
-        self.tb.add_graph(self.D, specgrams)
-        self.tb.add_graph(self.G, specgrams)
+        self.tb.add_image('images', specgrams)
+        # TODO: RuntimeError: size mismatch,
+        self.tb.add_graph(self.D, waveforms.unsqueeze(0))
+        self.tb.add_graph(self.G, waveforms.unsqueeze(0))
 
     # when run ends, close TensorBoard, zero epoch count
     def end_run(self):
@@ -162,7 +162,6 @@ class DefaultRunManager:
         self.epoch.loss = 0
         self.epoch.num_correct = 0
 
-    #
     def end_epoch(self):
         """
         Takes nothing
@@ -270,11 +269,11 @@ class DefaultTrainBuilder:
     number_of_experiments: Union[int, Any]
 
     def __init__(self) -> NoReturn:
-        self.m = DefaultRunManager()  # m indicates manager
         self.number_of_experiments = 0
-        # self.network = None
+        self.network = None
         # self.D = None
         # self.G = None
+        # self.m = DefaultRunManager(self.network)  # m indicates manager
         self.optimizerD = None
         self.optimizerG = None
         self.epochs = 1

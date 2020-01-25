@@ -27,7 +27,9 @@ class PhaseShuffle(nn.Module):
         if self.shift_factor == 0:
             return x
         # uniform in (L, R)
-        k_list = torch.Tensor(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor
+        k_list = torch.tensor(x.shape).random_(0, 2 * self.shift_factor + 1) - self.shift_factor
+        # k_list = torch.tensor(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor
+        # k_list = x.shape[0].random_(0, 2 * self.shift_factor + 1) - self.shift_factor
         k_list = k_list.numpy().astype(int)
 
         # Combine sample indices into lists so that less shuffle operations
@@ -45,9 +47,9 @@ class PhaseShuffle(nn.Module):
         # Apply shuffle to each sample
         for k, idxs in k_map.items():
             if k > 0:
-                x_shuffle[idxs] = F.pad(x[idxs][..., :-k], [k, 0], mode='reflect')
+                x_shuffle[idxs] = F.pad(x[idxs][:,:, :-k], [k, 0], mode='reflect')
             else:
-                x_shuffle[idxs] = F.pad(x[idxs][..., -k:], [0, -k], mode='reflect')
+                x_shuffle[idxs] = F.pad(x[idxs][:,:, -k:], [0, -k], mode='reflect')
 
         assert x_shuffle.shape == x.shape, "{}, {}".format(x_shuffle.shape,
                                                        x.shape)

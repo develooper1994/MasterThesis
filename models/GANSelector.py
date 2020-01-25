@@ -19,10 +19,11 @@ from models.architectures.WaveGAN import WaveGAN
 
 
 class GANSelector(DefaultTrainBuilder):
+    m: DefaultRunManager
+
     # def __init__(self, netD, netG) -> None:
     def __init__(self, GAN, data_loader, epochs=1) -> None:
         super().__init__()
-        self.m = DefaultRunManager()  # m indicates manager
         global gan_type
         self.epochs = epochs
         self.data_loader = data_loader
@@ -46,6 +47,8 @@ class GANSelector(DefaultTrainBuilder):
         self.test_loader = self.base_trainer.test_iter
         self.dataset = [self.train_loader, self.valid_loader, self.test_loader]
 
+        self.m = DefaultRunManager(gan_type, data_loader)  # m indicates manager
+
     def batches(self, **kwargs) -> NoReturn:
         self.base_trainer.train_gan_one_batch(kwargs)
         self.m.end_epoch()
@@ -66,7 +69,7 @@ class GANSelector(DefaultTrainBuilder):
         for run in runs:
             ## Experiments Start ##
 
-            self.m.begin_run(run, gan_type, self.train_loader)
+            self.m.begin_run(run)
             self.all_epochs(self.train_loader)
             ## Experiments End ##
             self.m.end_run()
