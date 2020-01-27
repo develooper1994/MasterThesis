@@ -1,6 +1,5 @@
 # standart module imports
-from collections import OrderedDict
-from collections import namedtuple
+from collections import OrderedDict, namedtuple
 from itertools import product  # cartesian product
 import time
 import datetime
@@ -99,9 +98,6 @@ class DefaultRunManager:
 
         # record model, loader and TensorBoard
         # self.network = None
-        # self.GAN = None
-        # self.D = None
-        # self.G = None
         self.loader = loader
         self.tb = None
 
@@ -134,8 +130,8 @@ class DefaultRunManager:
         self.tb = SummaryWriter(comment=f'-{run}')
         self.tb.add_image('images', specgrams)
         # TODO: RuntimeError: size mismatch,
-        self.tb.add_graph(self.D, waveforms.unsqueeze(0))
-        self.tb.add_graph(self.G, waveforms.unsqueeze(0))
+        self.tb.add_graph(self.D, waveforms)  # waveforms.unsqueeze(0)
+        self.tb.add_graph(self.G, waveforms)  # waveforms.unsqueeze(0)
 
     # when run ends, close TensorBoard, zero epoch count
     def end_run(self):
@@ -271,8 +267,6 @@ class DefaultTrainBuilder:
     def __init__(self) -> NoReturn:
         self.number_of_experiments = 0
         self.network = None
-        # self.D = None
-        # self.G = None
         # self.m = DefaultRunManager(self.network)  # m indicates manager
         self.optimizerD = None
         self.optimizerG = None

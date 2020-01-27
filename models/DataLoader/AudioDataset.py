@@ -36,7 +36,7 @@ class AudioDataset(Dataset):
     def __len__(self):
         return len(self.audio_name_list)
 
-    @torch.no_grad()
+    # @torch.no_grad()
     def __getitem__(self, idx):
         # TODO Test and use.
         print("Not done yet!!!")
@@ -54,12 +54,12 @@ class AudioDataset(Dataset):
         # point = random.randint(0, input_audio.shape[1] - self.num_samples)
         input_audio = input_audio[0, point:point + self.num_samples] / 32768.0
         # input_audio = torch.from_numpy(input_audio)
-        input_audio = input_audio.view(1, -1).float()
+        input_audio = input_audio.view(1, -1).float() / 32768.0
 
         if self.input_transform is not None:
             input_audio = self.input_transform(input_audio)
 
-        return input_audio, self.audio_label_list[idx]
+        return input_audio, self.get_all_audio_labels[idx]  # self.audio_label_list[idx]
 
     @property
     def get_all_audio_filepaths(self):
@@ -105,6 +105,7 @@ class AudioDataset(Dataset):
         """
         Audio sample generator from dataset
         :param filepath: Full path for dataset
+        :param label: label of data
         :param window_length: windowing lenght.
          function sampling with a windowing technique.
         :param fs: sampling frequency

@@ -9,6 +9,7 @@ class PhaseShuffle(nn.Module):
     by a random integer in {-n, n} and performing reflection padding where
     necessary.
     """
+
     # Copied from https://github.com/jtcramer/wavegan/blob/master/wavegan.py#L8
     def __init__(self, shift_factor):
         """
@@ -27,8 +28,8 @@ class PhaseShuffle(nn.Module):
         if self.shift_factor == 0:
             return x
         # uniform in (L, R)
-        k_list = torch.tensor(x.shape).random_(0, 2 * self.shift_factor + 1) - self.shift_factor
-        # k_list = torch.tensor(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor
+        # k_list = torch.tensor(x.shape).random_(0, 2 * self.shift_factor + 1) - self.shift_factor
+        k_list = torch.Tensor(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor  # Original and correct.
         # k_list = x.shape[0].random_(0, 2 * self.shift_factor + 1) - self.shift_factor
         k_list = k_list.numpy().astype(int)
 
@@ -45,14 +46,18 @@ class PhaseShuffle(nn.Module):
         x_shuffle = x.clone()
 
         # Apply shuffle to each sample
+        # TODO: second iteration idxs takes [1, 2] like 2 argument. Solve it.
+        # debugging cuda is dangerous. deletes original values while accessing with index
         for k, idxs in k_map.items():
+            # for idxs in idxs:  # just an idea. If it don't work, remove it.
+                # idx = [idx]
             if k > 0:
-                x_shuffle[idxs] = F.pad(x[idxs][:,:, :-k], [k, 0], mode='reflect')
+                x_shuffle[idxs] = F.pad(x[idxs][:, :, :-k], [k, 0], mode='reflect')
             else:
-                x_shuffle[idxs] = F.pad(x[idxs][:,:, -k:], [0, -k], mode='reflect')
+                x_shuffle[idxs] = F.pad(x[idxs][:, :, -k:], [0, -k], mode='reflect')
 
         assert x_shuffle.shape == x.shape, "{}, {}".format(x_shuffle.shape,
-                                                       x.shape)
+                                                           x.shape)
         return x_shuffle
 
 
@@ -61,6 +66,7 @@ class PhaseRemove(nn.Module):
     """
     Not Implemented Yet.
     """
+
     def __init__(self):
         super(PhaseRemove, self).__init__()
 

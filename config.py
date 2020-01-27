@@ -26,9 +26,15 @@ MODEL = "wavegan"
 
 # experiments
 params = OrderedDict(
+        # epochs=[EPOCHS],
         lr=[.01, .001],
-        batch_size=[100, 1000],
+        batch_size=[BATCH_SIZE, 100, 1000],
         shuffle=[True, False],
+        # dataset_name=[DATASET_NAME],
+        # output_name=[OUTPUT_PATH],
+        # window_lenght=[WINDOW_LENGHT],
+        # sample_every=[SAMPLE_EVERY],
+        # sample_num=[SAMPLE_NUM],
         # Model(Network)
-        MODEL="wavegan"
+        MODEL=["wavegan"],
     )
