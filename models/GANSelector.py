@@ -117,7 +117,6 @@ class GANSelector(DefaultTrainBuilder):
         # don't want to consume train_iter
         self.m = RunManager(gan_type, self.test_iter)  # m indicates manager
 
-
     def batches(self, **kwargs) -> NoReturn:
         self.base_trainer.train_gan_one_batch(kwargs)
         self.m.end_epoch()
