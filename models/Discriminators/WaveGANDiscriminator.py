@@ -68,12 +68,16 @@ class WaveGANDiscriminator(nn.Module):
         """
         # TODO: Experiment with BatchNorm1d Layer
         # Try to DCGAN first and than Parallel WaveGAN, Progressive Growing and EfficientNet approaches.
-        x = F.leaky_relu(self.conv1(x), negative_slope=self.alpha)
+        # torch.Size([150, 1, 16384])
         self.print_shape(x)
+
+        x = F.leaky_relu(self.conv1(x), negative_slope=self.alpha)
+        self.print_shape(x)  # torch.Size([150, 64, 4096])
         x = self.ps1(x)
+        # x = self.ps1.apply_phaseshuffle(x)
 
         x = F.leaky_relu(self.conv2(x), negative_slope=self.alpha)
-        self.print_shape(x)
+        self.print_shape(x)  # torch.Size([150, 128, 1024])
         x = self.ps2(x)
 
         x = F.leaky_relu(self.conv3(x), negative_slope=self.alpha)

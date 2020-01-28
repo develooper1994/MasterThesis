@@ -19,6 +19,7 @@ class PhaseShuffle(nn.Module):
         super(PhaseShuffle, self).__init__()
         self.shift_factor = shift_factor
 
+    # TODO: tensorboard throws an error because can't pytorch jit trace numpy or python objects like "regular int"
     def forward(self, x):
         """
         Phase shuffling transform forward pass
@@ -28,10 +29,11 @@ class PhaseShuffle(nn.Module):
         if self.shift_factor == 0:
             return x
         # uniform in (L, R)
-        # k_list = torch.tensor(x.shape).random_(0, 2 * self.shift_factor + 1) - self.shift_factor
-        k_list = torch.Tensor(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor  # Original and correct.
-        # k_list = x.shape[0].random_(0, 2 * self.shift_factor + 1) - self.shift_factor
+        k_list = torch.zeros(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor
+        # k_list = torch.Tensor(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor  # Original and correct.
+        # k_list = torch.Tensor(x.shape[0].item()).random_(0, 2 * self.shift_factor + 1) - self.shift_factor  # tb.add_graph
         k_list = k_list.numpy().astype(int)
+        # k_list = k_list.type(torch.int)
 
         # Combine sample indices into lists so that less shuffle operations
         # need to be performed
@@ -60,6 +62,28 @@ class PhaseShuffle(nn.Module):
                                                            x.shape)
         return x_shuffle
 
+    def apply_phaseshuffle(self, x):
+        # https://github.com/fromme0528/pytorch-WaveGAN/blob/597e9eb9d6ca8dd1eed3aa630fee318ff7791ee7/wavegan.py#L90
+        (batch, n_channel, x_len) = x.shape
+        r = torch.zeros(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor
+        pad_l = torch.max(r, 0)
+        pad_r = torch.max(-r, 0)
+        phase_start = pad_r
+
+        padding = F.pad()
+        # padding = nn.ReflectionPad1d((pad_l, pad_r, 0, 0))
+        #    print("phase : ", r)
+        # print("pad_l, pad_r, phase_start, x_len", pad_l, pad_r, phase_start, x_len)
+        # print("x.shape", x.shape)
+
+        for x_ in x:
+            ch_, len_ = x_.shape
+            x_ = x_.reshape(1, 1, ch_, len_)
+            x_ = padding(x_)
+            x_ = x_[:, :, :, phase_start:phase_start + len_]
+            x_ = x_.reshape(ch_, len_)
+
+        return x_
 
 class PhaseRemove(nn.Module):
     # TODO: Not Implemented Yet.

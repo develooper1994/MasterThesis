@@ -28,6 +28,7 @@ class RunManager(DefaultRunManager):
     def __init__(self, GAN, loader):
         super(RunManager, self).__init__(GAN, loader)
 
+    @torch.no_grad()
     def begin_run(self, run):
         """
         Configures and gives a start the one experiment.
@@ -48,19 +49,18 @@ class RunManager(DefaultRunManager):
         waveforms_labels = next(self.loader)  # next(iter(self.loader))
         # waveforms, labels = numpy_to_var(waveforms_labels['X']), waveforms_labels['Y']
         waveforms, labels = torch.from_numpy(waveforms_labels['X']).to(device), waveforms_labels['Y']
-        with torch.no_grad():
-            # torch.set_default_tensor_type('torch.cuda.FloatTensor') # fixes "RuntimeError: expected device cuda:0 but got device cpu" error
-            # specgram = torchaudio.transforms.Spectrogram()(torchaudio.transforms.AmplitudeToDB()(waveforms[0].cpu()))  # I don't it will write with iterator
-            specgram = torchaudio.transforms.Spectrogram()(waveforms[0].cpu())  # I don't it will write with iterator
-            # grid = torchvision.utils.make_grid(specgrams)
+        # torch.set_default_tensor_type('torch.cuda.FloatTensor') # fixes "RuntimeError: expected device cuda:0 but got device cpu" error
+        # specgram = torchaudio.transforms.Spectrogram()(torchaudio.transforms.AmplitudeToDB()(waveforms[0].cpu()))  # I don't it will write with iterator
+        specgram = torchaudio.transforms.Spectrogram()(waveforms[0].cpu())  # I don't it will write with iterator
+        # grid = torchvision.utils.make_grid(specgrams)
 
-            # # Tensorboard configuration
-            self.tb = SummaryWriter(comment=f'-{run}')
-            self.tb.add_image('sample image', specgram.unsqueeze(0).permute((0, 2, 1)).numpy())
-            # TODO: !!!RuntimeError: size mismatch,
-        # numpy_to_var sends (interrupted by signal 11: SIGSEGV) to Process finished with exit code
-        self.tb.add_graph(self.D, numpy_to_var(waveforms.unsqueeze(0)))  # waveforms.unsqueeze(0)
-        self.tb.add_graph(self.G, waveforms)  # waveforms.unsqueeze(0)
+        # # Tensorboard configuration
+        self.tb = SummaryWriter(comment=f'-{run}')
+        self.tb.add_image('sample image', specgram.unsqueeze(0).permute((0, 2, 1)))
+        # TODO: !!!RuntimeError: hasSpecialCase INTERNAL ASSERT FAILED at /opt/conda/conda-bld/pytorch_1580112455885/work/torch/csrc/jit/passes/alias_analysis.cpp:299, please report a bug to PyTorch. We don't have an op for aten::to but it isn't a special case. (analyzeImpl at /opt/conda/conda-bld/pytorch_1580112455885/work/torch/csrc/jit/passes/alias_analysis.cpp:299)
+        # TODO: I couldn't solve it. Almost everyone has this issue and it haven't solve yet.
+        # self.tb.add_graph(self.D, waveforms.unsqueeze(1), True)  # waveforms.unsqueeze(1)
+        # self.tb.add_graph(self.G, waveforms.unsqueeze(1))  # waveforms.unsqueeze(1)
 
     def end_run(self):
         super(RunManager, self).end_run()

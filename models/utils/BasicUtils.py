@@ -6,7 +6,9 @@ import math
 import os
 import pickle
 import time
+from typing import NoReturn
 
+import librosa
 import torch
 from torch import nn
 from torch import autograd
@@ -17,6 +19,7 @@ from models.losses.BaseLoss import wassertein_loss
 
 # 3'rd party
 import numpy as np
+import matplotlib.pyplot as plt
 
 cuda = True if torch.cuda.is_available() else False
 global device
@@ -24,7 +27,22 @@ device = torch.device("cuda" if cuda else "cpu")
 print("Training device: {}".format(device))
 
 
-## the basic useful utilities
+#############################
+# The basic useful utilities
+#############################
+def get_recursive_files(folderPath, ext):
+    results = os.listdir(folderPath)
+    outFiles = []
+    for file in results:
+        if os.path.isdir(os.path.join(folderPath, file)):
+            outFiles += get_recursive_files(os.path.join(folderPath, file), ext)
+        elif file.endswith(ext):
+            outFiles.append(os.path.join(folderPath, file))
+
+    return outFiles
+
+
+# the basic useful utilities
 def make_path(output_path):
     """
     Create folder
@@ -53,15 +71,155 @@ def time_since(since):
     s -= m * 60
     return '%dm %ds' % (m, s)
 
+#############################
+# Plotting utils
+#############################
+def visualize_audio(audio_tensor, is_monphonic=False) -> NoReturn:
+    # takes a batch ,n channels , window length and plots the spectogram
+    input_audios = audio_tensor.detach().cpu().numpy()
+    plt.figure(figsize=(18, 50))
+    for i, audio in enumerate(input_audios):
+        plt.subplot(10, 2, i + 1)
+        if is_monphonic:
+            plt.title('Monophonic %i' % (i + 1))
+            librosa.display.waveplot(audio[0], sr=sampling_rate)
+        else:
+            D = librosa.amplitude_to_db(np.abs(librosa.stft(audio[0])), ref=np.max)
+            librosa.display.specshow(D, y_axis='linear')
+            plt.colorbar(format='%+2.0f dB')
+            plt.title('Linear-frequency power spectrogram %i' % (i + 1))
+    plt.show()
 
-def prevent_net_update(net):
-    for p in net.parameters():
-        p.requires_grad = False
+
+def visualize_loss(loss_1, loss_2, first_legend, second_legend, y_label) -> NoReturn:
+    plt.figure(figsize=(10, 5))
+    plt.title("{} and {} Loss During Training".format(first_legend, second_legend))
+    plt.plot(loss_1, label=first_legend)
+    plt.plot(loss_2, label=second_legend)
+    plt.xlabel("iterations")
+    plt.ylabel(y_label)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.legend()
+    plt.show()
 
 
-def require_net_update(net):
-    for p in net.parameters():
-        p.requires_grad = True
+def latent_space_interpolation(model, n_samples=10) -> NoReturn:
+    z_test = sample_noise(2)
+    with torch.no_grad():
+        interpolates = []
+        for alpha in np.linspace(0, 1, n_samples):
+            interpolate_vec = alpha * z_test[0] + ((1 - alpha) * z_test[1])
+            interpolates.append(interpolate_vec)
+
+        interpolates = torch.stack(interpolates)
+        generated_audio = model(interpolates)
+    visualize_audio(generated_audio, True)
+
+
+#############################
+# Wav files utils
+#############################
+# Fast loading used with wav files only of 8 bits
+def load_wav(wav_file_path):
+    try:
+        if normalize_audio:
+            audio_data, _ = librosa.load(wav_file_path, sr=sampling_rate)
+
+            # Clip magnitude
+            max_mag = np.max(np.abs(audio_data))
+            if max_mag > 1:
+                audio_data /= max_mag
+    except Exception as e:
+        LOGGER.error("Could not load {}: {}".format(wav_file_path, str(e)))
+        raise e
+    audio_len = len(audio_data)
+    if audio_len < window_length:
+        pad_length = window_length - audio_len
+        left_pad = pad_length // 2
+        right_pad = pad_length - left_pad
+        audio_data = np.pad(audio_data, (left_pad, right_pad), mode='constant')
+
+    return audio_data.astype('float32')
+
+
+def sample_audio(audio_data, start_idx=None, end_idx=None):
+    audio_len = len(audio_data)
+    if audio_len == window_length:
+        # If we only have a single 1*window_length audio, just yield.
+        sample = audio_data
+    else:
+        # Sample a random window from the audio
+        if start_idx is None or end_idx is None:
+            start_idx = np.random.randint(0, (audio_len - window_length) // 2)
+            end_idx = start_idx + window_length
+        sample = audio_data[start_idx:end_idx]
+    sample = sample.astype('float32')
+    assert not np.any(np.isnan(sample))
+    return sample, start_idx, end_idx
+
+
+def sample_buffer(buffer_data, start_idx=None, end_idx=None):
+    audio_len = len(buffer_data) // 4
+    if audio_len == window_length:
+        # If we only have a single 1*window_length audio, just yield.
+        sample = buffer_data
+    else:
+        # Sample a random window from the audio
+        if start_idx is None or end_idx is None:
+            start_idx = np.random.randint(0, (audio_len - window_length) // 2)
+            end_idx = start_idx + window_length
+        sample = buffer_data[start_idx * 4:end_idx * 4]
+    return sample, start_idx, end_idx
+
+
+def wav_generator(file_path):
+    audio_data = load_wav(file_path)
+    while True:
+        sample, _, _ = sample_audio(audio_data)
+        yield {'single': sample}
+
+
+def create_stream_reader(single_signal_file_list):
+    data_streams = []
+    for audio_path in single_signal_file_list:
+        stream = pescador.Streamer(wav_generator, audio_path)
+        data_streams.append(stream)
+    mux = pescador.ShuffledMux(data_streams)
+    return pescador.buffer_stream(mux, batch_size)
+
+
+def save_samples(epoch_samples, epoch: object) -> NoReturn:
+    """
+    Save output samples.
+    """
+    sample_dir = make_path(os.path.join(output_dir, str(epoch)))
+
+    for idx, sample in enumerate(epoch_samples):
+        output_path = os.path.join(sample_dir, "{}.wav".format(idx + 1))
+        sample = sample[0]
+        librosa.output.write_wav(output_path, sample, sampling_rate)
+
+#############################
+# Model Utils
+#############################
+
+def update_optimizer_lr(optimizer, lr, decay) -> NoReturn:
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr * decay
+
+
+def gradients_status(model, flag) -> NoReturn:
+    for p in model.parameters():
+        p.requires_grad = flag
+
+
+def prevent_net_update(net) -> NoReturn:
+    gradients_status(False)
+
+
+def require_net_update(net) -> NoReturn:
+    gradients_status(True)
 
 
 def numpy_to_var(numpy_data):
@@ -344,7 +502,7 @@ def weights_init(self):
             nn.init.xavier_uniform_(module.weight)  # xavier_normal_, xavier_uniform_, kaiming_normal_, kaiming_uniform_
             nn.init.constant_(module.bias, 0)
 
-## print info
+    ## print info
     def print_all(self, epoch):
         print("Epoch: {}/{}.. ".format(epoch + 1, self.epochs),
               "steps: {}.. ".format(self.steps + 1),
@@ -358,7 +516,7 @@ def weights_init(self):
     def print_net(self):
         print(self.net)
 
-## accuracy
+    ## accuracy
     def accuracy_(self, outputs, labels):
         top_p, top_class = outputs.topk(1, dim=1)
         equals = top_class == labels.view(*top_class.shape)
@@ -377,7 +535,7 @@ def weights_init(self):
         accuracy = correct / total
         return accuracy
 
-## save and load model
+    ## save and load model
     def model_save(self, PATH):
         return torch.save(self.net.state_dict(), PATH)
 
@@ -439,6 +597,8 @@ class data_getters:
             "accuracy": {"train": train_accuracy / print_every,
                          "test": test_accuracy / len(testloader)}
         }
+
+
 ## transforms
 def torch_image_to_numpy_image(torch_img):
     # torch -> C(channel), H(height), W(width)
@@ -447,6 +607,7 @@ def torch_image_to_numpy_image(torch_img):
     numpy_img = torch_img.numpy()
     return np.transpose(numpy_img, (1, 2, 0))
     # torch_img = torchvision.transforms.ToPILImage()(torch_img)
+
 
 def rgb2gray(rgb):
     return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])

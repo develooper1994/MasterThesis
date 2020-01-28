@@ -26,4 +26,3 @@ class TrainingUtility:
         # Plot loss curve.
         plot_loss(D_costs_train, D_wasses_train,
                   D_costs_valid, D_wasses_valid, G_costs, output_dir)
-

@@ -27,6 +27,15 @@ For `sc09` task, **make sure `sc09` dataset under your current project filepath 
 ```
 $ python train.py
 ```
+### Tensorboard Visualization
+Run in different console to open Tensorboard.
+tensorboard --logdir=runs
+
+##### !!! WARNING !!
+If you want to use Tensorboard, you have to disable jit. Otherwise Pytorch ends training session due to 
+MasterThesis/models/custom_transform/custom_transform.py/PhaseShuffle non-jitable part.
+PYTORCH_JIT=0 python main.py
+https://pytorch.org/docs/stable/jit.html#disable-jit-for-debugging
 
 #### Training time
 * For `SC09` dataset, <don't know yet> takes nearly <don't know yet> to get reasonable result.
