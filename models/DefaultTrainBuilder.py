@@ -1,37 +1,32 @@
 # standart module imports
-import os
-from collections import OrderedDict, namedtuple
-from itertools import product  # cartesian product
-import time
 import datetime
 import json
-from typing import List, Any, NoReturn, Union, Optional
+import os
+import time
+from collections import OrderedDict, namedtuple
+from itertools import product  # cartesian product
+from typing import List, Any, NoReturn, Union
 
+import pandas as pd
 # classical machine learning imports
 import torch
 import torchaudio
-from torch import nn
-from torch.nn import functional as F
-from torch.utils.tensorboard import SummaryWriter
-import torchvision
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-from pandas import DataFrame
 from IPython.display import display, clear_output
-
-# other 3rd party libraries
-from tqdm import tqdm
+from pandas import DataFrame
+from torch.utils.tensorboard import SummaryWriter
 
 # my modules
 from config import target_signals_dir, batch_size, generator_batch_size_factor, device
 from models.DataLoader.AudioDataset import AudioDataset
-from models.Trainers.DefaultTrainer import DefaultTrainer, epochs
+from models.DataLoader.DataLoader import WavDataLoader
+from models.Trainers.DefaultTrainer import DefaultTrainer
+from models.Trainers.DefaultTrainer import audio_dir, output_dir
 from models.Trainers.WaveganTrainer import WaveGan_GP
 from models.architectures.WaveGAN import WaveGAN
 from models.utils.BasicUtils import visualize_loss, latent_space_interpolation, sample_noise
-from models.DataLoader.DataLoader import WavDataLoader
-from models.Trainers.DefaultTrainer import audio_dir, output_dir
+
+
+# other 3rd party libraries
 
 
 class RunBuilder:

@@ -1,6 +1,5 @@
 from typing import List, Any, NoReturn
 
-import torch
 import torch.optim as optim
 from torch.autograd import grad
 from torch.optim import Adam
@@ -12,7 +11,6 @@ from models.Discriminators.WaveGANDiscriminator import WaveGANDiscriminator
 from models.Generators.WaveGANGenerator import WaveGANGenerator
 from models.utils.BasicUtils import visualize_loss, latent_space_interpolation, sample_noise, gradients_status, \
     save_samples, update_optimizer_lr
-from models.utils.utils import *
 
 
 class WaveGan_GP(object):

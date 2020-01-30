@@ -1,11 +1,8 @@
 # from models.wavegan import WaveGAN
 from typing import NoReturn
-from collections import OrderedDict
 
-from models.DataLoader.AudioDataset import AudioDataset
-from models.DefaultTrainBuilder import DefaultTrainBuilder
-from models.Trainers.DefaultTrainer import audio_dir, output_dir
 from config import params
+from models.DefaultTrainBuilder import DefaultTrainBuilder
 
 
 def main() -> NoReturn:
