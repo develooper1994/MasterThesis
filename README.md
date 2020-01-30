@@ -1,7 +1,7 @@
 # This repository is not a full package yet.
 
-# ! TODO: Title
-# GAN LAB - version 0.1
+# My Master Thesis
+# GAN LAB - version 0.12
 PyTorch implementation of [!TODO: link]()
 
 Before running, make sure you have the `sc09` dataset, and put that dataset into 
@@ -61,8 +61,10 @@ Run in different console to open Tensorboard.
 tensorboard --logdir=runs
 
 ##### !!! WARNING !!
-If you want to use Tensorboard, you have to disable jit. Otherwise Pytorch ends training session due to 
-MasterThesis/models/custom_transform/custom_transform.py/PhaseShuffle non-jitable part.
+If you want to use Tensorboard, you may see some "TracerWarning" warning. This warning throws due to 
+MasterThesis/models/custom_transform/custom_transform.py/PhaseShuffle/forward Converting a tensor to a Python index
+
+There is a advice in main documentation
 PYTORCH_JIT=0 python main.py
 https://pytorch.org/docs/stable/jit.html#disable-jit-for-debugging
 
