@@ -13,9 +13,9 @@ class BaseGANUtils:
         self.netG = Generator
         self.netD = Discriminator
 
-    def create_network(self, model_size, ngpus, latent_dim):
-        self.netG = self.netG(model_size=model_size, ngpus=ngpus, latent_dim=latent_dim, upsample=True)
-        self.netD = self.netD(model_size=model_size, ngpus=ngpus)
+    def create_network(self, model_size):
+        self.netG = self.netG(model_size=model_size, upsample=True)
+        self.netD = self.netD(model_size=model_size)
 
         netG, netD = parallel_models(self.netG, self.netD)
         return netG, netD

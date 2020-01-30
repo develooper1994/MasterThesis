@@ -20,7 +20,7 @@ class WaveGAN:
         self.epochs_per_sample, self.lmbda, audio_dir, self.output_dir, arguments = get_params()
 
         # network
-        self.netG, self.netD = wave_gan_utils.create_network(self.model_size, self.ngpus, self.latent_dim)
+        self.generator, self.discriminator = wave_gan_utils.create_network(self.model_size)
 
         # "Two time-scale update rule"(TTUR) to update netD 4x faster than netG.
         self.optimizerD, self.optimizerG = wave_gan_utils.optimizers(arguments)

@@ -1,11 +1,14 @@
 import torch.optim as optim
+import torchaudio
 from torch.autograd import grad
 from torch.optim import Adam
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from wavegan_pytorch.models.models import WaveGANDiscriminator, WaveGANGenerator
-from wavegan_pytorch.utils import *
-from wavegan_pytorch.utils import WavDataLoader
+from models.Discriminators.WaveGANDiscriminator import WaveGANDiscriminator
+from models.Generators.WaveGANGenerator import WaveGANGenerator
+from models.utils.BasicUtils import visualize_loss
+from models.utils.utils import *
 
 
 class WaveGan_GP(object):
@@ -23,6 +26,7 @@ class WaveGan_GP(object):
 
     def __init__(self, train_loader, val_loader, validate: bool = True, use_batchnorm: bool = False) -> NoReturn:
         super(WaveGan_GP, self).__init__()
+        from models.DefaultTrainBuilder import DefaultRunManager
         self.g_cost = []
         self.train_d_cost = []
         self.train_w_distance = []
@@ -30,6 +34,8 @@ class WaveGan_GP(object):
         self.valid_w_distance = []
         self.valid_g_cost = []
         self.valid_reconstruction = []
+
+        self.generated, self.disc_cost, self.disc_wd = 0, 0, 0
 
         self.discriminator = WaveGANDiscriminator(slice_len=window_length, model_size=model_capacity_size,
                                                   use_batch_norm=use_batchnorm, num_channels=num_channels).to(device)
@@ -46,6 +52,8 @@ class WaveGan_GP(object):
 
         self.validate = validate
         self.n_samples_per_batch = len(train_loader)
+
+        self.m = DefaultRunManager(self.discriminator, self.generator, self.val_loader)
 
     def calculate_discriminator_loss(self, real, generated):
         disc_out_gen = self.discriminator(generated)
@@ -93,7 +101,6 @@ class WaveGan_GP(object):
     # Train GAN
     #############################
     def train(self):
-        global disc_cost, disc_wd, generated
         progress_bar = tqdm(total=n_iterations // progress_bar_step_iter_size)
         fixed_noise = sample_noise(batch_size).to(device)  # used to save samples every few epochs
 
@@ -101,30 +108,38 @@ class WaveGan_GP(object):
 
         first_iter = self.start_training(fixed_noise, gan_model_name, progress_bar)
 
-        for iter_indx in range(first_iter, n_iterations):
-            self.generator.train()
-            self.enable_disc_disable_gen()
-            self.train_critic_all()
-
-            self.validate_func(generated, iter_indx)
-
-            #############################
-            # (2) Update G network every n_critic steps
-            #############################
-            self.apply_zero_grad()
-            self.enable_gen_disable_disc()
-
-            noise = sample_noise(batch_size * generator_batch_size_factor).to(device)
-            generated = self.generator(noise)
-            discriminator_output_fake = self.discriminator(generated)
-            generator_cost = -discriminator_output_fake.mean()
-            generator_cost.backward()
-            self.optimizer_g.step()
-
-            self.finish_iteration(disc_cost, disc_wd, fixed_noise, gan_model_name, generator_cost, iter_indx,
-                                  progress_bar)
+        self.train_all_epochs(first_iter, fixed_noise, gan_model_name, progress_bar)
 
         self.generator.eval()
+
+    def train_all_epochs(self, first_iter, fixed_noise, gan_model_name, progress_bar):
+        for iter_indx in range(first_iter, n_iterations):
+            self.train_one_epoch(fixed_noise, gan_model_name, iter_indx, progress_bar)
+
+    def train_one_epoch(self, fixed_noise, gan_model_name, iter_indx, progress_bar):
+        global disc_cost, disc_wd, generated
+        self.generator.train()
+        self.enable_disc_disable_gen()
+        self.train_critic_all()
+        self.validate_func(generated, iter_indx)
+        #############################
+        # (2) Update G network every n_critic steps
+        #############################
+        generator_cost = self.generator_update()
+        self.finish_iteration(disc_cost, disc_wd, fixed_noise, gan_model_name, generator_cost, iter_indx,
+                              progress_bar)
+
+    def generator_update(self):
+        global generated
+        self.apply_zero_grad()
+        self.enable_gen_disable_disc()
+        noise = sample_noise(batch_size * generator_batch_size_factor).to(device)
+        generated = self.generator(noise)
+        discriminator_output_fake = self.discriminator(generated)
+        generator_cost = -discriminator_output_fake.mean()
+        generator_cost.backward()
+        self.optimizer_g.step()
+        return generator_cost
 
     def finish_iteration(self, disc_cost, disc_wd, fixed_noise, gan_model_name, generator_cost, iter_indx, progress_bar):
         self.cost_store_every(disc_cost, disc_wd, generator_cost, iter_indx, progress_bar)
@@ -238,7 +253,6 @@ class WaveGan_GP(object):
                 'g_cost': self.g_cost
             }
             torch.save(saving_dict, gan_model_name)
-
 
 if __name__ == '__main__':
     print("Training Started")

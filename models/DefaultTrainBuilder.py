@@ -1,4 +1,5 @@
 # standart module imports
+import os
 from collections import OrderedDict, namedtuple
 from itertools import product  # cartesian product
 import time
@@ -23,7 +24,12 @@ from IPython.display import display, clear_output
 from tqdm import tqdm
 
 # my modules
-from models.Trainers.DefaultTrainer import DefaultTrainer
+from config import target_signals_dir
+from models.Trainers.DefaultTrainer import DefaultTrainer, epochs
+from models.Trainers.WaveganTrainer import WaveGan_GP
+from models.architectures.WaveGAN import WaveGAN
+from models.utils.BasicUtils import visualize_loss
+from models.utils.utils import WavDataLoader, latent_space_interpolation
 
 
 class RunBuilder:
@@ -85,12 +91,11 @@ class DefaultRunManager:
 
     # TODO! make a evaluation method with testloader
     # TODO! split dataset into train, validation(dev) and test
-    def __init__(self, GAN, loader):
+    def __init__(self, discriminator, generator, loader):
         # tracking every epoch count, loss, accuracy, time
 
-        self.GAN = GAN
-        self.G = GAN.netG
-        self.D = GAN.netD
+        self.G = discriminator
+        self.D = generator
         self.epoch = Epoch()
 
         # tracking every run count, run data, hyper-params used, time
@@ -264,13 +269,45 @@ class DefaultRunManager:
 class DefaultTrainBuilder:
     number_of_experiments: Union[int, Any]
 
-    def __init__(self) -> NoReturn:
+    def __init__(self, GAN, data_loader, epochs=1) -> NoReturn:
+        self.epochs = epochs
+        self.GAN = GAN
+        self.data_loader = data_loader
+
         self.number_of_experiments = 0
         self.network = None
         # self.m = DefaultRunManager(self.network)  # m indicates manager
-        self.optimizerD = None
-        self.optimizerG = None
+        self.optimizerD, self.optimizerG = None, None
         self.epochs = 1
+
+        print(f"using {GAN} trainer")
+        if GAN == "wavegan":
+            gan_type: WaveGAN = WaveGAN()
+            self.netD, self.netG = gan_type.discriminator, gan_type.generator  # WaveGANDiscriminator, WaveGANGenerator
+            self.optimizerD, self.optimizerG = gan_type.optimizerD, gan_type.optimizerG  # wave_gan_utils.optimizers(arguments)
+            self.set_nets(self.netD, self.netG)
+            self.base_trainer = DefaultTrainer(self.netG, self.netD, self.optimizerG, self.optimizerD, gan_type,
+                                               self.data_loader)
+            self.train_iter = self.base_trainer.train_iter
+            self.valid_iter = self.base_trainer.valid_iter
+            self.test_iter = self.base_trainer.test_iter
+            self.dataset = [self.train_iter, self.valid_iter, self.test_iter]
+        elif GAN in ["wavegan-gp", "wavegan_gp", "wavegangp"]:
+            self.train_iter: WavDataLoader = WavDataLoader(os.path.join(target_signals_dir, 'train'))
+            self.valid_iter: WavDataLoader = WavDataLoader(os.path.join(target_signals_dir, 'valid'))
+            self.test_iter: WavDataLoader = WavDataLoader(os.path.join(target_signals_dir, 'test'))
+            self.dataset = [self.train_iter, self.valid_iter, self.test_iter]
+
+            wave_gan: WaveGan_GP = WaveGan_GP(self.train_iter, self.valid_iter)
+            self.base_trainer = wave_gan
+            self.base_trainer.train()
+            visualize_loss(self.base_trainer.g_cost, self.base_trainer.valid_g_cost, 'Train', 'Val', 'Negative Critic Loss')
+            latent_space_interpolation(self.base_trainer.generator, n_samples=5)
+
+        else:
+            print("I don't know your GAN. Make your own")
+
+        self.m = DefaultRunManager(gan_type.discriminator, gan_type.generator, self.test_iter)  # m indicates manager
 
     # TODO! keras like evaluate function to measure accuracy
     def evaluate(self):
@@ -321,38 +358,24 @@ class DefaultTrainBuilder:
         # self.m.end_run()
         pass
 
-    # DefaultTrainer train_discriminator
-    def batches(self, loader) -> NoReturn:
-        """
-        Takes one batch at a time and calculates and track
-        @param loader: pytorch dataloader
-        @return: None
-        """
-        # one batch
-        # for batch in tqdm(loader, "all batches"):
-        #     images, labels = batch[0], batch[1]
-        #     preds = self.network(images)
-        #     self.optimizer.zero_grad()  # clear gradient accumulator
-        #
-        #     # loss and gradient
-        #     loss = F.cross_entropy(preds, labels)
-        #     loss.backward()
-        #     self.optimizer.step()
-        #
-        #     self.m.track_loss(loss)
-        #     self.m.track_num_correct(preds, labels)
+    # # DefaultTrainer train
+    # def all_epochs(self, loader) -> NoReturn:
+    #     start = time.time()
+    #     for epoch in range(1, epochs + 1):
+    #         self.m.begin_epoch()
+    #         # one batch
+    #         if self.GAN == "wavegan":
+    #             self.base_trainer.train_one_epoch(epoch, start)
+    #         elif self.GAN in ["wavegan-gp", "wavegan_gp", "wavegangp"]:
+    #             self.base_trainer.train_one_epoch()
+    #         else:
+    #             print("I don't know your GAN. Make your own")
 
-        self.m.end_epoch()
+    def train(self):
+        self.base_trainer.train()
+        # self.all_epochs(self.train_iter)
 
-    # DefaultTrainer train
-    def all_epochs(self, loader) -> NoReturn:
-        for _ in tqdm(range(self.epochs), "all epochs"):
-            self.m.begin_epoch()
-
-            # one batch
-            self.batches(loader)
-
-    def experiments(self, train_set, runs) -> NoReturn:
+    def experiments(self, runs) -> NoReturn:
         # start experiments with parameters
         for run in runs:
             # if params changes, following line of code should reflect the changes too
@@ -365,9 +388,15 @@ class DefaultTrainBuilder:
 
             # self.m.begin_run(run, self.network, loader)
             # self.all_epochs(loader)
+
+            ## Experiments Start ##
+            self.m.begin_run(run)
+            # self.all_epochs(self.train_iter)
+            self.base_trainer.train()
+            ## Experiments End ##
             self.m.end_run()
 
-    def wrap_experiments(self, params, data_sets, epochs: int, validation=False) -> NoReturn:
+    def wrap_experiments(self, params, epochs: int) -> NoReturn:
         """
         Put all to gather
         @param params: hyperparameters for experiment
@@ -380,13 +409,6 @@ class DefaultTrainBuilder:
             Default False.
         @return: None
         """
-        if validation:
-            validation_set = data_sets[1]
-            test_set = data_sets[2]
-        else:
-            test_set = data_sets[1]
-
-        train_set = data_sets[0]
         # get all runs from params using RunBuilder class
         runs = RunBuilder.get_runs(params)
         self.epochs = epochs
@@ -394,10 +416,35 @@ class DefaultTrainBuilder:
         print(f"number of experiments or rows: {self.number_of_experiments}")
 
         # start experiments with parameters
-        self.experiments(train_set, runs)
+        self.experiments(runs)
 
         # when all runs are done, save results to files
         time = datetime.datetime.now()
         # TODO! add time stamp like that. datetime.datetime.now().strftime("%c"). !OSError: [Errno 22] Invalid argument!
         self.m.save('results')
         print("End of all training experiments")
+
+    def train_experiments(self, params):
+        self.wrap_experiments(params=params, epochs=self.epochs)
+
+    ######################
+    # Getters and Stetters
+    ######################
+    def set_discriminator(self, netD):
+        self.netD = netD
+
+    def get_discriminator(self):
+        return self.netD
+
+    def set_generator(self, netG):
+        self.netG = netG
+
+    def get_generator(self):
+        return self.netG
+
+    def set_nets(self, netD, netG):
+        self.set_generator(netD)
+        self.set_generator(netG)
+
+    def get_nets(self):
+        return self.get_discriminator(), self.get_generator()

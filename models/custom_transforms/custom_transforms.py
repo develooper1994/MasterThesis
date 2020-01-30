@@ -1,3 +1,5 @@
+from typing import NoReturn
+
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
@@ -11,7 +13,7 @@ class PhaseShuffle(nn.Module):
     """
 
     # Copied from https://github.com/jtcramer/wavegan/blob/master/wavegan.py#L8
-    def __init__(self, shift_factor):
+    def __init__(self, shift_factor) -> NoReturn:
         """
         Initializes phase shuffling transform
         :param shift_factor: phase shuffling transform factor
@@ -33,7 +35,6 @@ class PhaseShuffle(nn.Module):
         # k_list = torch.Tensor(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor  # Original and correct.
         # k_list = torch.Tensor(x.shape[0].item()).random_(0, 2 * self.shift_factor + 1) - self.shift_factor  # tb.add_graph
         k_list = k_list.numpy().astype(int)
-        # k_list = k_list.type(torch.int)
 
         # Combine sample indices into lists so that less shuffle operations
         # need to be performed
@@ -54,36 +55,14 @@ class PhaseShuffle(nn.Module):
             # for idxs in idxs:  # just an idea. If it don't work, remove it.
                 # idx = [idx]
             if k > 0:
-                x_shuffle[idxs] = F.pad(x[idxs][:, :, :-k], [k, 0], mode='reflect')
+                x_shuffle[idxs] = F.pad(x[idxs][..., :-k], (k, 0), mode='reflect')
             else:
-                x_shuffle[idxs] = F.pad(x[idxs][:, :, -k:], [0, -k], mode='reflect')
+                x_shuffle[idxs] = F.pad(x[idxs][..., -k:], (0, -k), mode='reflect')
 
         assert x_shuffle.shape == x.shape, "{}, {}".format(x_shuffle.shape,
                                                            x.shape)
         return x_shuffle
 
-    def apply_phaseshuffle(self, x):
-        # https://github.com/fromme0528/pytorch-WaveGAN/blob/597e9eb9d6ca8dd1eed3aa630fee318ff7791ee7/wavegan.py#L90
-        (batch, n_channel, x_len) = x.shape
-        r = torch.zeros(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor
-        pad_l = torch.max(r, 0)
-        pad_r = torch.max(-r, 0)
-        phase_start = pad_r
-
-        padding = F.pad()
-        # padding = nn.ReflectionPad1d((pad_l, pad_r, 0, 0))
-        #    print("phase : ", r)
-        # print("pad_l, pad_r, phase_start, x_len", pad_l, pad_r, phase_start, x_len)
-        # print("x.shape", x.shape)
-
-        for x_ in x:
-            ch_, len_ = x_.shape
-            x_ = x_.reshape(1, 1, ch_, len_)
-            x_ = padding(x_)
-            x_ = x_[:, :, :, phase_start:phase_start + len_]
-            x_ = x_.reshape(ch_, len_)
-
-        return x_
 
 class PhaseRemove(nn.Module):
     # TODO: Not Implemented Yet.

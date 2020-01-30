@@ -9,17 +9,20 @@ import time
 from typing import NoReturn
 
 import librosa
+import pescador
 import torch
 from torch import nn
 from torch import autograd
 
 # my libraries
-from config import DATASET_NAME, OUTPUT_PATH, EPOCHS, BATCH_SIZE, SAMPLE_EVERY, SAMPLE_NUM
+from config import *
 from models.losses.BaseLoss import wassertein_loss
 
 # 3'rd party
 import numpy as np
 import matplotlib.pyplot as plt
+
+from models.utils.utils import sample_noise
 
 cuda = True if torch.cuda.is_available() else False
 global device
@@ -71,6 +74,7 @@ def time_since(since):
     s -= m * 60
     return '%dm %ds' % (m, s)
 
+
 #############################
 # Plotting utils
 #############################
@@ -102,19 +106,6 @@ def visualize_loss(loss_1, loss_2, first_legend, second_legend, y_label) -> NoRe
     plt.tight_layout()
     plt.legend()
     plt.show()
-
-
-def latent_space_interpolation(model, n_samples=10) -> NoReturn:
-    z_test = sample_noise(2)
-    with torch.no_grad():
-        interpolates = []
-        for alpha in np.linspace(0, 1, n_samples):
-            interpolate_vec = alpha * z_test[0] + ((1 - alpha) * z_test[1])
-            interpolates.append(interpolate_vec)
-
-        interpolates = torch.stack(interpolates)
-        generated_audio = model(interpolates)
-    visualize_audio(generated_audio, True)
 
 
 #############################
@@ -215,11 +206,11 @@ def gradients_status(model, flag) -> NoReturn:
 
 
 def prevent_net_update(net) -> NoReturn:
-    gradients_status(False)
+    gradients_status(net, False)
 
 
 def require_net_update(net) -> NoReturn:
-    gradients_status(True)
+    gradients_status(net, True)
 
 
 def numpy_to_var(numpy_data):
@@ -502,50 +493,52 @@ def weights_init(self):
             nn.init.xavier_uniform_(module.weight)  # xavier_normal_, xavier_uniform_, kaiming_normal_, kaiming_uniform_
             nn.init.constant_(module.bias, 0)
 
-    ## print info
-    def print_all(self, epoch):
-        print("Epoch: {}/{}.. ".format(epoch + 1, self.epochs),
-              "steps: {}.. ".format(self.steps + 1),
-              "learning rate: {} ".format(self.get_lr_()),
-              "Train loss: {0:.3f}.. ".format(self.running_loss / self.print_every),
-              "Train accuracy: {0:.3f}".format(self.train_accuracy / self.print_every),
-              "Test loss: {0:.3f}.. ".format(self.test_loss / len(self.testloader)),
-              "Test accuracy: {0:.3f}".format(self.test_accuracy / len(self.testloader))
-              )
+## print info
+def print_all(self, epoch):
+    print("Epoch: {}/{}.. ".format(epoch + 1, self.epochs),
+          "steps: {}.. ".format(self.steps + 1),
+          "learning rate: {} ".format(self.get_lr_()),
+          "Train loss: {0:.3f}.. ".format(self.running_loss / self.print_every),
+          "Train accuracy: {0:.3f}".format(self.train_accuracy / self.print_every),
+          "Test loss: {0:.3f}.. ".format(self.test_loss / len(self.testloader)),
+          "Test accuracy: {0:.3f}".format(self.test_accuracy / len(self.testloader))
+          )
 
-    def print_net(self):
-        print(self.net)
+def print_net(self):
+    print(self.net)
 
-    ## accuracy
-    def accuracy_(self, outputs, labels):
-        top_p, top_class = outputs.topk(1, dim=1)
-        equals = top_class == labels.view(*top_class.shape)
-        if self.device == "cpu":
-            accuracy = torch.mean(equals.type(torch.FloatTensor))
-        else:
-            accuracy = torch.mean(equals.type(torch.cuda.FloatTensor))
-        return accuracy
+## accuracy
+def accuracy_(self, outputs, labels):
+    top_p, top_class = outputs.topk(1, dim=1)
+    equals = top_class == labels.view(*top_class.shape)
+    if self.device == "cpu":
+        accuracy = torch.mean(equals.type(torch.FloatTensor))
+    else:
+        accuracy = torch.mean(equals.type(torch.cuda.FloatTensor))
+    return accuracy
 
-    def accuracy2_(self, outputs, labels):
-        correct = 0
-        total = 0
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).squeeze().sum().item()
-        accuracy = correct / total
-        return accuracy
 
-    ## save and load model
-    def model_save(self, PATH):
-        return torch.save(self.net.state_dict(), PATH)
+def accuracy2_(self, outputs, labels):
+    correct = 0
+    total = 0
+    _, predicted = torch.max(outputs.data, 1)
+    total += labels.size(0)
+    correct += (predicted == labels).squeeze().sum().item()
+    return correct / total
 
-    def model_load_(self, PATH):
-        "loading network itself"
-        return self.net.load_state_dict(torch.load(PATH))
+## save and load model
+def model_save(self, PATH):
+    return torch.save(self.net.state_dict(), PATH)
 
-    def model_load(self, PATH):
-        "loading network to another network"
-        return torch.load(PATH)
+
+def model_load_(self, PATH):
+    "loading network itself"
+    return self.net.load_state_dict(torch.load(PATH))
+
+
+def model_load(self, PATH):
+    """loading network to another network"""
+    return torch.load(PATH)
 
 
 ## get possibilities

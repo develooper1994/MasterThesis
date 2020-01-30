@@ -13,8 +13,8 @@ target_signals_dir: str = '/home/selcuk/.pytorch/piano'
 #############################
 model_prefix: str = 'exp1'  # name of the model to be saved
 n_iterations: int = 10000
-lr_g = 1e-4
-lr_d = 1e-4
+lr_g: float = 1e-4
+lr_d: float = 1e-4
 beta1: int = 0
 beta2: float = 0.999
 decay_lr = False  # used to linearly deay learning rate untill reaching 0 at iteration 100,000

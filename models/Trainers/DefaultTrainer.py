@@ -14,8 +14,8 @@ from models.architectures.WaveGAN import wave_gan_utils
 from models.losses.BaseLoss import wassertein_loss
 from models.utils.BasicUtils import get_params
 from models.utils.BasicUtils import require_net_update, numpy_to_var, calc_gradient_penalty, \
-    prevent_net_update, cuda, compute_and_record_batch_history, save_avg_cost_one_epoch, device
-
+    prevent_net_update, cuda, compute_and_record_batch_history, save_avg_cost_one_epoch
+from config import device
 # 3rd party modules
 
 
@@ -32,9 +32,9 @@ class DefaultTrainer:
     def __init__(self, generator, discriminator, gen_optimizer, dis_optimizer, GAN, data_loader=None,
                  gp_weight=10, critic_iterations=5, print_every=50,
                  use_cuda=True):
-        cuda = True if torch.cuda.is_available() and use_cuda else False
-        self.device = torch.device("cuda" if cuda else "cpu")
-        print("Training device: {}".format(self.device))
+        # cuda = True if torch.cuda.is_available() and use_cuda else False
+        # self.device = torch.device("cuda" if cuda else "cpu")
+        print("Training device: {}".format(device))
 
         self.data_loader = data_loader
         self.BATCH_NUM, self.train_iter, self.valid_iter, self.test_iter = \
@@ -87,31 +87,6 @@ class DefaultTrainer:
         D_cost_train_epoch, D_wass_train_epoch = [], []
         D_cost_valid_epoch, D_wass_valid_epoch = [], []
         G_cost_epoch = []
-        # for i in range(1, self.BATCH_NUM + 1):
-        #     # #############################
-        #     # # (1) Train Discriminator (n_discriminate_train times)
-        #     # #############################
-        #     # # Set Discriminators parameters to require gradients.
-        #     # require_net_update(self.D)
-        #     #
-        #     # one = torch.tensor(1, dtype=torch.float)
-        #     # neg_one = torch.tensor(-1, dtype=torch.float)
-        #     # one = one.to(device)
-        #     # neg_one = neg_one.to(device)
-        #     #
-        #     # #############################
-        #     # # (1.1) Train Discriminator 1 times
-        #     # #############################
-        #     # self.train_discriminator(D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
-        #     #                          self.critic_iterations, neg_one, one)
-        #     #
-        #     # #############################
-        #     # # (3) Train Generator
-        #     # #############################
-        #     # # Prevent discriminator update.
-        #     # self.train_generator_once(neg_one, G_cost_epoch, start, epoch, i)
-        #     self.train_gan_one_batch(D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
-        #                              G_cost_epoch, start, epoch, i)
         self.train_gan_all_batches(D_cost_train_epoch, D_cost_valid_epoch, D_wass_train_epoch, D_wass_valid_epoch,
                                    G_cost_epoch, start, epoch)
         # Save the average cost of batches in every epoch.

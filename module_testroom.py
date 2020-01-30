@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 # mymodules
 from models.DataLoader.AudioDataset import AudioDataset
-from models.GANSelector import GANSelector
+from models.DefaultTrainBuilder import DefaultTrainBuilder
 from models.Trainers.DefaultTrainer import audio_dir, output_dir
 from config import params
 

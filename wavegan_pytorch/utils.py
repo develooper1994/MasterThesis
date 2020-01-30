@@ -208,6 +208,9 @@ class WavDataLoader:
         numpy_array = numpy_array[:, np.newaxis, :]
         return torch.Tensor(numpy_array).to(device)
 
+    def __getitem__(self, item):
+        raise NotImplementedError
+
     def __iter__(self):
         return self
 

@@ -3,6 +3,5 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/models/optimizers/Best-Deep-Learning-Optimizers" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/wavegan-pytorch" vcs="Git" />
   </component>
 </project>
