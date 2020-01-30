@@ -1,8 +1,18 @@
+import os
+import time
+from typing import Iterator, Dict, Any, Union, List, NoReturn, Generator
+
+import numpy as np
+import torch
+from numpy import ndarray
+from numpy.core._multiarray_umath import ndarray
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
-from models.DataLoader.AudioDataset import AudioDataset, Sc09, Piano
-from config import OUTPUT_PATH
+# my modules
+from config import OUTPUT_PATH, device, target_signals_dir
+from models.DataLoader.AudioDataset import AudioDataset
+from models.utils.BasicUtils import get_recursive_files, create_stream_reader
 
 
 # original: https://github.com/ericlearning/generative-unconditional/blob/master/dataset.py
@@ -94,3 +104,44 @@ class Dataset:
         return returns
 
 
+#############################
+# Creating Data Loader and Sampler
+#############################
+class WavDataLoader:
+    data_iter: Iterator[Dict[Any, Union[Union[ndarray, ndarray, ndarray], Any]]]
+    signal_paths: List[Union[bytes, str]]
+
+    def __init__(self, folder_path: object, audio_extension: object = 'wav') -> object:
+        self.signal_paths, self.signal_label = get_recursive_files(folder_path, audio_extension)
+        self.data_iter = None
+        self.initialize_iterator()
+
+    def initialize_iterator(self) -> NoReturn:
+        data_iter: Generator[Dict[Any, Union[ndarray, Any]], Any, Any] = create_stream_reader(self.signal_paths, self.signal_label)
+        self.data_iter = iter(data_iter)
+
+    def __len__(self) -> int:
+        return len(self.signal_paths)
+
+    def numpy_to_tensor(self, numpy_array, label):
+        numpy_array = numpy_array[:, np.newaxis, :]
+        return torch.Tensor(numpy_array).to(device), label
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        it: Dict[Any, Union[ndarray, Any]] = next(self.data_iter)
+        return self.numpy_to_tensor(it['single'], it['label'])
+
+
+if __name__ == '__main__':
+    # import time
+
+    start: float = time.time()
+    print(time.time() - start)
+    train_loader: WavDataLoader = WavDataLoader(os.path.join(target_signals_dir, 'train'))
+    start: float = time.time()
+    for i in range(7):
+        x = next(train_loader)
+    print(time.time() - start)

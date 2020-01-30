@@ -64,5 +64,5 @@ class WaveGANDiscriminator(nn.Module):
 
         return self.fc1(x)
 
-    def __repr__(self):
-        return 'WaveGANDiscriminator'
+    # def __repr__(self):
+    #     return 'WaveGANDiscriminator'

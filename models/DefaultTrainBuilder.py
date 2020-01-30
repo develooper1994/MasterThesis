@@ -24,12 +24,14 @@ from IPython.display import display, clear_output
 from tqdm import tqdm
 
 # my modules
-from config import target_signals_dir
+from config import target_signals_dir, batch_size, generator_batch_size_factor, device
+from models.DataLoader.AudioDataset import AudioDataset
 from models.Trainers.DefaultTrainer import DefaultTrainer, epochs
 from models.Trainers.WaveganTrainer import WaveGan_GP
 from models.architectures.WaveGAN import WaveGAN
-from models.utils.BasicUtils import visualize_loss
-from models.utils.utils import WavDataLoader, latent_space_interpolation
+from models.utils.BasicUtils import visualize_loss, latent_space_interpolation, sample_noise
+from models.DataLoader.DataLoader import WavDataLoader
+from models.Trainers.DefaultTrainer import audio_dir, output_dir
 
 
 class RunBuilder:
@@ -94,8 +96,8 @@ class DefaultRunManager:
     def __init__(self, discriminator, generator, loader):
         # tracking every epoch count, loss, accuracy, time
 
-        self.G = discriminator
-        self.D = generator
+        self.netG = generator
+        self.netD = discriminator
         self.epoch = Epoch()
 
         # tracking every run count, run data, hyper-params used, time
@@ -128,15 +130,17 @@ class DefaultRunManager:
         # one batch data
         # TODO: label info not completed
         waveforms, labels = next(iter(self.loader))
-        specgrams = torchaudio.transforms.Spectrogram()(waveforms)  # I don't it will write with iterator
+        specgrams = torchaudio.transforms.Spectrogram()(waveforms.cpu())  # I don't it will write with iterator
         # grid = torchvision.utils.make_grid(specgrams)
 
         # # Tensorboard configuration
-        self.tb = SummaryWriter(comment=f'-{run}')
-        self.tb.add_image('images', specgrams)
+        self.tb = SummaryWriter(comment=f'-{run}')  # MOST TIME CONSUMING PART. don't remove or change.
+        self.tb.add_image('images', specgrams[0])
         # TODO: RuntimeError: size mismatch,
-        self.tb.add_graph(self.D, waveforms)  # waveforms.unsqueeze(0)
-        self.tb.add_graph(self.G, waveforms)  # waveforms.unsqueeze(0)
+        self.tb.add_graph(self.netD, waveforms)
+        # (noise_latent_dim, 4 * 4 * model_size * self.dim_mul)
+        fix_noise = sample_noise(batch_size * generator_batch_size_factor).to(device)
+        self.tb.add_graph(self.netG, fix_noise)
 
     # when run ends, close TensorBoard, zero epoch count
     def end_run(self):
@@ -148,9 +152,12 @@ class DefaultRunManager:
         self.tb.flush()
         self.tb.close()
         self.epoch.count = 0
+        visualize_loss(self.base_trainer.g_cost, self.base_trainer.valid_g_cost, 'Train', 'Val', 'Negative Critic Loss')
+        latent_space_interpolation(self.base_trainer.generator, n_samples=5)
 
     # zero epoch count, loss, accuracy,
     # TODO! refactor begin_epoch and end_epoch functions
+    # @torch.no_grad()
     def begin_epoch(self) -> NoReturn:
         """
         Takes nothing
@@ -187,11 +194,11 @@ class DefaultRunManager:
         self.tb.add_scalar('Accuracy', accuracy, self.epoch.count)
 
         # Record discriminator params to TensorBoard
-        for name, param in self.D.named_parameters():
+        for name, param in self.netD.named_parameters():
             self.tb.add_histogram(f'{name} discriminator', param, self.epoch.count)
             self.tb.add_histogram(f'{name}.grad', param.grad, self.epoch.count)
         # Record generator params to TensorBoard
-        for name, param in self.G.named_parameters():
+        for name, param in self.netG.named_parameters():
             self.tb.add_histogram(f'{name} generator', param, self.epoch.count)
             self.tb.add_histogram(f'{name}.grad', param.grad, self.epoch.count)
 
@@ -214,7 +221,7 @@ class DefaultRunManager:
         display(df)
 
     # accumulate loss of batch into entire epoch loss
-    @torch.no_grad()
+    # @torch.no_grad()
     def track_loss(self, loss):
         """
         Tracks loss function for loss for each epoch
@@ -225,7 +232,7 @@ class DefaultRunManager:
         self.epoch.loss += loss.item() * self.loader.batch_size
 
     # accumulate number of corrects of batch into entire epoch num_correct
-    @torch.no_grad()
+    # @torch.no_grad()
     def track_num_correct(self, preds, labels):
         """
         Takes predictions and labels
@@ -237,7 +244,7 @@ class DefaultRunManager:
         """
         self.epoch.num_correct += self._get_num_correct(preds, labels)
 
-    @torch.no_grad()
+    # @torch.no_grad()
     def _get_num_correct(self, preds, labels):
         """
         Takes predictions and labels
@@ -250,6 +257,7 @@ class DefaultRunManager:
         return preds.argmax(dim=1).eq(labels).sum().item()
 
     # save end results of all runs into csv, json for further analysis
+    @torch.no_grad()
     def save(self, filename):
         """
         Creates .csv file with pandas and a .json dump file with json.
@@ -286,6 +294,7 @@ class DefaultTrainBuilder:
             self.netD, self.netG = gan_type.discriminator, gan_type.generator  # WaveGANDiscriminator, WaveGANGenerator
             self.optimizerD, self.optimizerG = gan_type.optimizerD, gan_type.optimizerG  # wave_gan_utils.optimizers(arguments)
             self.set_nets(self.netD, self.netG)
+            self.data_loader = AudioDataset(input_dir=audio_dir, output_dir=output_dir)
             self.base_trainer = DefaultTrainer(self.netG, self.netD, self.optimizerG, self.optimizerD, gan_type,
                                                self.data_loader)
             self.train_iter = self.base_trainer.train_iter
@@ -298,11 +307,13 @@ class DefaultTrainBuilder:
             self.test_iter: WavDataLoader = WavDataLoader(os.path.join(target_signals_dir, 'test'))
             self.dataset = [self.train_iter, self.valid_iter, self.test_iter]
 
-            wave_gan: WaveGan_GP = WaveGan_GP(self.train_iter, self.valid_iter)
-            self.base_trainer = wave_gan
-            self.base_trainer.train()
-            visualize_loss(self.base_trainer.g_cost, self.base_trainer.valid_g_cost, 'Train', 'Val', 'Negative Critic Loss')
-            latent_space_interpolation(self.base_trainer.generator, n_samples=5)
+            gan_type: WaveGan_GP = WaveGan_GP(self.train_iter, self.valid_iter)
+            self.netD, self.netG = gan_type.discriminator, gan_type.generator
+            self.set_nets(self.netD, self.netG)
+            self.base_trainer = gan_type
+            # self.base_trainer.train()
+            # visualize_loss(self.base_trainer.g_cost, self.base_trainer.valid_g_cost, 'Train', 'Val', 'Negative Critic Loss')
+            # latent_space_interpolation(self.base_trainer.generator, n_samples=5)
 
         else:
             print("I don't know your GAN. Make your own")

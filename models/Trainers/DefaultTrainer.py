@@ -7,6 +7,7 @@ from typing import NoReturn
 import torch
 from torch import autograd
 
+import models.utils.BasicUtils
 from models.Trainers.TrainingUtility import TrainingUtility
 # from models.GANSelector import epochs, batch_size, latent_dim, epochs_per_sample, lmbda, output_dir, arguments
 # my modules
@@ -52,7 +53,7 @@ class DefaultTrainer:
         self.print_every = print_every
 
         # Sample noise used for generated output.
-        self.sample_noise = wave_gan_utils.sample_noise(arguments, latent_dim, device)
+        self.sample_noise = models.utils.BasicUtils.sample_noise(arguments, latent_dim, device)
 
         # collect cost information
         self.D_cost_train, self.D_wass_train = 0, 0

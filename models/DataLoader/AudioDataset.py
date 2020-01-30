@@ -32,7 +32,7 @@ class AudioDataset(Dataset):
         self.audio_name_list = self.get_all_audio_filepaths
         self.audio_label_list = self.get_all_audio_labels
 
-    @torch.no_grad()
+    # @torch.no_grad()
     def __len__(self):
         return len(self.audio_name_list)
 
@@ -206,7 +206,7 @@ class AudioDataset(Dataset):
 
         return train_data, valid_data, test_data, train_size
 
-    @torch.no_grad()
+    # @torch.no_grad()
     def split_manage_data(self, arguments, batch_size):
         train_data, valid_data, test_data, train_size = self.split_data(self.audio_name_list,
                                                                         self.audio_label_list,

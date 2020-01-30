@@ -13,7 +13,7 @@ class PhaseShuffle(nn.Module):
     """
 
     # Copied from https://github.com/jtcramer/wavegan/blob/master/wavegan.py#L8
-    def __init__(self, shift_factor) -> NoReturn:
+    def __init__(self, shift_factor):
         """
         Initializes phase shuffling transform
         :param shift_factor: phase shuffling transform factor
@@ -34,34 +34,51 @@ class PhaseShuffle(nn.Module):
         k_list = torch.zeros(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor
         # k_list = torch.Tensor(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor  # Original and correct.
         # k_list = torch.Tensor(x.shape[0].item()).random_(0, 2 * self.shift_factor + 1) - self.shift_factor  # tb.add_graph
-        k_list = k_list.numpy().astype(int)
-
-        # Combine sample indices into lists so that less shuffle operations
-        # need to be performed
-        k_map = {}
-        for idx, k in enumerate(k_list):
-            k = int(k)
-            if k not in k_map:
-                k_map[k] = []
-            k_map[k].append(idx)
+        k_list = k_list.type(torch.long)
 
         # Make a copy of x for our output
         x_shuffle = x.clone()
 
-        # Apply shuffle to each sample
-        # TODO: second iteration idxs takes [1, 2] like 2 argument. Solve it.
-        # debugging cuda is dangerous. deletes original values while accessing with index
-        for k, idxs in k_map.items():
-            # for idxs in idxs:  # just an idea. If it don't work, remove it.
-                # idx = [idx]
-            if k > 0:
-                x_shuffle[idxs] = F.pad(x[idxs][..., :-k], (k, 0), mode='reflect')
+        # is a_list_unique sort important?
+        # a = k_list  # torch.zeros(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor
+        a_list_unique = k_list.unique()
+        for a_unique in a_list_unique:
+            indices = (k_list == a_unique).nonzero().squeeze()
+            # TODO: Pytorch jit throws "TracerWarning" due to Python style indexing.
+            if a_unique.gt(torch.tensor(0)):  # a_unique > 0:  # Throws trace warning.
+                x_shuffle[indices] = F.pad(x[indices][..., :-a_unique], (a_unique, 0), mode='reflect')
             else:
-                x_shuffle[idxs] = F.pad(x[idxs][..., -k:], (0, -k), mode='reflect')
+                x_shuffle[indices] = F.pad(x[indices][..., -a_unique:], (0, -a_unique), mode='reflect')
 
-        assert x_shuffle.shape == x.shape, "{}, {}".format(x_shuffle.shape,
-                                                           x.shape)
+        # Pytorch jit assertation not supported.
+        # assert x_shuffle.shape == x.shape, "{}, {}".format(x_shuffle.shape,
+        #                                                    x.shape)
         return x_shuffle
+
+        # # ORIGINAL
+        # k_list = k_list.numpy().astype(int)
+        # # Groups same k_list values' indicies
+        # # Combine sample indices into lists so that less shuffle operations
+        # # need to be performed
+        # # TODO: This part isn't jitable. Make it jitable
+        # k_map = {}
+        # for idx, k in enumerate(k_list):
+        #     k = int(k)
+        #     if k not in k_map:
+        #         k_map[k] = []
+        #     k_map[k].append(idx)
+        # # Apply shuffle to each sample
+        # # TODO: second iteration idxs takes [1, 2] like 2 argument. Solve it.
+        # # debugging cuda is dangerous. deletes original values while accessing with index
+        # for k, idxs in k_map.items():
+        #     if k > 0:
+        #         x_shuffle[idxs] = F.pad(x[idxs][..., :-k], (k, 0), mode='reflect')
+        #     else:
+        #         x_shuffle[idxs] = F.pad(x[idxs][..., -k:], (0, -k), mode='reflect')
+        #
+        # assert x_shuffle.shape == x.shape, "{}, {}".format(x_shuffle.shape,
+        #                                                    x.shape)
+        # return x_shuffle
 
 
 class PhaseRemove(nn.Module):

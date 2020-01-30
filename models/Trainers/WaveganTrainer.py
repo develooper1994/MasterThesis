@@ -1,13 +1,17 @@
+from typing import List, Any, NoReturn
+
+import torch
 import torch.optim as optim
-import torchaudio
 from torch.autograd import grad
 from torch.optim import Adam
-from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
+from config import *
+from models.DataLoader.DataLoader import WavDataLoader
 from models.Discriminators.WaveGANDiscriminator import WaveGANDiscriminator
 from models.Generators.WaveGANGenerator import WaveGANGenerator
-from models.utils.BasicUtils import visualize_loss
+from models.utils.BasicUtils import visualize_loss, latent_space_interpolation, sample_noise, gradients_status, \
+    save_samples, update_optimizer_lr
 from models.utils.utils import *
 
 
@@ -19,12 +23,16 @@ class WaveGan_GP(object):
     valid_w_distance: List[Any]
     valid_g_cost: List[Any]
     valid_reconstruction: List[Any]
-    optimizer_g: Adam
-    optimizer_d: Adam
+    optimizerG: Adam
+    optimizerD: Adam
     discriminator: WaveGANDiscriminator
     generator: WaveGANGenerator
 
-    def __init__(self, train_loader, val_loader, validate: bool = True, use_batchnorm: bool = False) -> NoReturn:
+    def __init__(self, train_loader: object, val_loader: object, validate: object = True, use_batchnorm: object = False) -> object:
+        """
+
+        :rtype: object
+        """
         super(WaveGan_GP, self).__init__()
         from models.DefaultTrainBuilder import DefaultRunManager
         self.g_cost = []
@@ -43,9 +51,9 @@ class WaveGan_GP(object):
         self.generator = WaveGANGenerator(slice_len=window_length, model_size=model_capacity_size,
                                           use_batch_norm=use_batchnorm, num_channels=num_channels).to(device)
 
-        self.optimizer_g = optim.Adam(self.generator.parameters(), lr=lr_g,
-                                      betas=(beta1, beta2))  # Setup Adam optimizers for both G and D
-        self.optimizer_d = optim.Adam(self.discriminator.parameters(), lr=lr_d, betas=(beta1, beta2))
+        self.optimizerG = optim.Adam(self.generator.parameters(), lr=lr_g,
+                                     betas=(beta1, beta2))  # Setup Adam optimizers for both G and D
+        self.optimizerD = optim.Adam(self.discriminator.parameters(), lr=lr_d, betas=(beta1, beta2))
 
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -138,7 +146,7 @@ class WaveGan_GP(object):
         discriminator_output_fake = self.discriminator(generated)
         generator_cost = -discriminator_output_fake.mean()
         generator_cost.backward()
-        self.optimizer_g.step()
+        self.optimizerG.step()
         return generator_cost
 
     def finish_iteration(self, disc_cost, disc_wd, fixed_noise, gan_model_name, generator_cost, iter_indx, progress_bar):
@@ -156,8 +164,7 @@ class WaveGan_GP(object):
 
     def train_critic_once(self):
         global generated, disc_cost, disc_wd
-        data = next(self.train_loader)
-        real_signal = data
+        real_signal, label = next(self.train_loader)
         # need to add mixed signal and flag
         noise = sample_noise(batch_size * generator_batch_size_factor).to(device).to(device)
         generated = self.generator(noise)
@@ -168,7 +175,7 @@ class WaveGan_GP(object):
         disc_cost, disc_wd = self.calculate_discriminator_loss(real_signal.data, generated.data)
         assert not (torch.isnan(disc_cost))
         disc_cost.backward()
-        self.optimizer_d.step()
+        self.optimizerD.step()
 
     def start_training(self, fixed_noise, gan_model_name, progress_bar):
         first_iter = 0
@@ -191,8 +198,8 @@ class WaveGan_GP(object):
             checkpoint = torch.load(gan_model_name, map_location='cpu')
         self.generator.load_state_dict(checkpoint['generator'])
         self.discriminator.load_state_dict(checkpoint['discriminator'])
-        self.optimizer_d.load_state_dict(checkpoint['optimizer_d'])
-        self.optimizer_g.load_state_dict(checkpoint['optimizer_g'])
+        self.optimizerD.load_state_dict(checkpoint['optimizer_d'])
+        self.optimizerG.load_state_dict(checkpoint['optimizer_g'])
         self.train_d_cost = checkpoint['train_d_cost']
         self.train_w_distance = checkpoint['train_w_distance']
         self.valid_d_cost = checkpoint['valid_d_cost']
@@ -204,8 +211,7 @@ class WaveGan_GP(object):
     def validate_func(self, generated, iter_indx):
         if self.validate and iter_indx % store_cost_every == 0:
             self.disable_all()
-            val_data = next(self.val_loader)
-            val_real = val_data
+            val_real, label = next(self.val_loader)
 
             val_disc_loss, val_disc_wd = self.calculate_discriminator_loss(val_real.data, generated.data)
             self.valid_d_cost.append(val_disc_loss.item())
@@ -228,8 +234,8 @@ class WaveGan_GP(object):
         if decay_lr:
             decay = max(0.0, 1.0 - iter_indx * 1.0 / n_iterations)
             # update the learning rate
-            update_optimizer_lr(self.optimizer_d, lr_d, decay)
-            update_optimizer_lr(self.optimizer_g, lr_g, decay)
+            update_optimizer_lr(self.optimizerD, lr_d, decay)
+            update_optimizer_lr(self.optimizerG, lr_g, decay)
 
     def save_samples_every(self, fixed_noise, iter_indx):
         if iter_indx % save_samples_every == 0:
@@ -243,8 +249,8 @@ class WaveGan_GP(object):
                 'generator': self.generator.state_dict(),
                 'discriminator': self.discriminator.state_dict(),
                 'n_iterations': iter_indx,
-                'optimizer_d': self.optimizer_d.state_dict(),
-                'optimizer_g': self.optimizer_g.state_dict(),
+                'optimizer_d': self.optimizerD.state_dict(),
+                'optimizer_g': self.optimizerG.state_dict(),
                 'train_d_cost': self.train_d_cost,
                 'train_w_distance': self.train_w_distance,
                 'valid_d_cost': self.valid_d_cost,

@@ -3,46 +3,48 @@ import argparse
 import datetime
 import json
 import math
-import os
 import pickle
 import time
-from typing import NoReturn
+from typing import NoReturn, Union
 
 import librosa
+import matplotlib.pyplot as plt
+# 3'rd party
+import numpy as np
+# pescador has no cuda and TorchJIT support
 import pescador
 import torch
-from torch import nn
 from torch import autograd
+from torch import nn
 
 # my libraries
 from config import *
+from config import device, noise_latent_dim
 from models.losses.BaseLoss import wassertein_loss
-
-# 3'rd party
-import numpy as np
-import matplotlib.pyplot as plt
-
-from models.utils.utils import sample_noise
-
-cuda = True if torch.cuda.is_available() else False
-global device
-device = torch.device("cuda" if cuda else "cpu")
-print("Training device: {}".format(device))
 
 
 #############################
 # The basic useful utilities
 #############################
+def sample_noise(size):
+    z = torch.FloatTensor(size, noise_latent_dim).to(device)
+    z.data.normal_()  # generating latent space based on normal distribution
+    return z
+
+
 def get_recursive_files(folderPath, ext):
     results = os.listdir(folderPath)
     outFiles = []
+    labels = []
+    file: Union[bytes, str]
     for file in results:
         if os.path.isdir(os.path.join(folderPath, file)):
             outFiles += get_recursive_files(os.path.join(folderPath, file), ext)
         elif file.endswith(ext):
             outFiles.append(os.path.join(folderPath, file))
+            labels.append(file.split('.')[0])
 
-    return outFiles
+    return outFiles, labels
 
 
 # the basic useful utilities
@@ -108,6 +110,19 @@ def visualize_loss(loss_1, loss_2, first_legend, second_legend, y_label) -> NoRe
     plt.show()
 
 
+def latent_space_interpolation(model, n_samples=10) -> NoReturn:
+    z_test = sample_noise(2)
+    with torch.no_grad():
+        interpolates = []
+        for alpha in np.linspace(0, 1, n_samples):
+            interpolate_vec = alpha * z_test[0] + ((1 - alpha) * z_test[1])
+            interpolates.append(interpolate_vec)
+
+        interpolates = torch.stack(interpolates)
+        generated_audio = model(interpolates)
+    visualize_audio(generated_audio, True)
+
+
 #############################
 # Wav files utils
 #############################
@@ -164,17 +179,17 @@ def sample_buffer(buffer_data, start_idx=None, end_idx=None):
     return sample, start_idx, end_idx
 
 
-def wav_generator(file_path):
+def wav_generator(file_path, label):
     audio_data = load_wav(file_path)
     while True:
         sample, _, _ = sample_audio(audio_data)
-        yield {'single': sample}
+        yield {'single': sample, 'label': label}
 
 
-def create_stream_reader(single_signal_file_list):
+def create_stream_reader(single_signal_file_list, single_signal_label_list):
     data_streams = []
     for audio_path in single_signal_file_list:
-        stream = pescador.Streamer(wav_generator, audio_path)
+        stream = pescador.Streamer(wav_generator, audio_path, single_signal_label_list)
         data_streams.append(stream)
     mux = pescador.ShuffledMux(data_streams)
     return pescador.buffer_stream(mux, batch_size)
@@ -190,6 +205,7 @@ def save_samples(epoch_samples, epoch: object) -> NoReturn:
         output_path = os.path.join(sample_dir, "{}.wav".format(idx + 1))
         sample = sample[0]
         librosa.output.write_wav(output_path, sample, sampling_rate)
+
 
 #############################
 # Model Utils
@@ -604,3 +620,6 @@ def torch_image_to_numpy_image(torch_img):
 
 def rgb2gray(rgb):
     return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])
+
+
+
