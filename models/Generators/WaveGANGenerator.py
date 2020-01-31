@@ -108,13 +108,11 @@ class WaveGANGenerator(nn.Module):
         if self.use_batch_norm:
             x = self.bn1(x)
         x = F.relu(x)
-        if self.verbose:
-            print(x.shape)
+        self.print_shape(x)
 
         for deconv in self.deconv_list[:-1]:
             x = F.relu(deconv(x))
-            if self.verbose:
-                print(x.shape)
+            self.print_shape(x)
         return torch.tanh(self.deconv_list[-1](x))
 
     def print_shape(self, x):

@@ -56,13 +56,15 @@ class WaveGANDiscriminator(nn.Module):
     def forward(self, x):
         for conv in self.conv_layers:
             x = conv(x)
-            if self.verbose:
-                print(x.shape)
+            self.print_shape(x)
         x = x.view(-1, self.fc_input_size)
-        if self.verbose:
-            print(x.shape)
+        self.print_shape(x)
 
         return self.fc1(x)
 
-    # def __repr__(self):
-    #     return 'WaveGANDiscriminator'
+    def print_shape(self, x):
+        if self.verbose:
+            print(x.shape)
+
+    def __repr__(self):
+        return 'WaveGANDiscriminator'

@@ -56,9 +56,11 @@ class Epoch:
     loss: int
     num_correct: int
 
-    def __init__(self, count=0, loss=0, num_correct=0, start_time=0):
+    def __init__(self, count=0, loss_list=None, num_correct=0, start_time=0):
+        if loss_list is None:
+            loss_list = []
         self.count = count
-        self.loss = loss
+        self.loss_list = loss_list
         self.num_correct = num_correct
         self.start_time = start_time
 
@@ -86,8 +88,6 @@ class DefaultRunManager:
     """
     run: Run
 
-    # TODO! make a evaluation method with testloader
-    # TODO! split dataset into train, validation(dev) and test
     def __init__(self, discriminator, generator, loader):
         # tracking every epoch count, loss, accuracy, time
 
@@ -105,7 +105,6 @@ class DefaultRunManager:
 
     # record the count, hyper-param, model, loader of each run
     # record sample images and network graph to TensorBoard
-    # TODO! refactor begin_run and end_run functions
     def begin_run(self, run):
         """
         Configures and gives a start the one experiment.
@@ -123,7 +122,6 @@ class DefaultRunManager:
 
         # TODO: Implment Tensorboard visualization in  models.utils.visualization
         # one batch data
-        # TODO: label info not completed
         waveforms, labels = next(iter(self.loader))
         specgrams = torchaudio.transforms.Spectrogram()(waveforms.cpu())  # I don't it will write with iterator
         # grid = torchvision.utils.make_grid(specgrams)
@@ -131,7 +129,7 @@ class DefaultRunManager:
         # # Tensorboard configuration
         self.tb = SummaryWriter(comment=f'-{run}')  # MOST TIME CONSUMING PART. don't remove or change.
         self.tb.add_image('images', specgrams[0])
-        # TODO: RuntimeError: size mismatch,
+        # TODO: Second graph overrides.
         self.tb.add_graph(self.netD, waveforms)
         # (noise_latent_dim, 4 * 4 * model_size * self.dim_mul)
         fix_noise = sample_noise(batch_size * generator_batch_size_factor).to(device)
@@ -152,7 +150,7 @@ class DefaultRunManager:
 
     # zero epoch count, loss, accuracy,
     # TODO! refactor begin_epoch and end_epoch functions
-    # @torch.no_grad()
+    @torch.no_grad()
     def begin_epoch(self) -> NoReturn:
         """
         Takes nothing
@@ -181,24 +179,30 @@ class DefaultRunManager:
         run_duration = time.time() - self.run.start_time
 
         # record epoch loss and accuracy
-        loss = self.epoch.loss / len(self.loader.dataset)
-        accuracy = self.epoch.num_correct / len(self.loader.dataset)
+        # loss = self.epoch.loss / len(self.loader.dataset)
+        # lossD = self.epoch.loss / len(self.loader)
+        # lossG = self.epoch.lossG / len(self.loader)
+        #
+        # # Record epoch loss and accuracy to TensorBoard
+        # self.tb.add_scalar('Loss_D', lossD, self.epoch.count)
+        # self.tb.add_scalar('Loss_G', lossG, self.epoch.count)
+        for count, loss in enumerate(self.epoch.loss_list):
+            loss = loss / len(self.loader)
 
-        # Record epoch loss and accuracy to TensorBoard
-        self.tb.add_scalar('Loss', loss, self.epoch.count)
+            # Record epoch loss and accuracy to TensorBoard
+            self.tb.add_scalar(f'Loss_{count}', loss, self.epoch.count)
+
+        # accuracy = self.epoch.num_correct / len(self.loader.dataset)
+        accuracy = self.epoch.num_correct / len(self.loader)
         self.tb.add_scalar('Accuracy', accuracy, self.epoch.count)
 
         # Record discriminator params to TensorBoard
-        for name, param in self.netD.named_parameters():
-            self.tb.add_histogram(f'{name} discriminator', param, self.epoch.count)
-            self.tb.add_histogram(f'{name}.grad', param.grad, self.epoch.count)
+        self.histogram_tensorboard(self.netD)
         # Record generator params to TensorBoard
-        for name, param in self.netG.named_parameters():
-            self.tb.add_histogram(f'{name} generator', param, self.epoch.count)
-            self.tb.add_histogram(f'{name}.grad', param.grad, self.epoch.count)
+        self.histogram_tensorboard(self.netG)
 
         # Write into 'results' (OrderedDict) for all run related data
-        results = OrderedDict()
+        results: OrderedDict[Union[str, Any], Union[Union[int, float], Any]] = OrderedDict()
         results["run"] = self.run.count
         results["epoch"] = self.epoch.count
         results["loss"] = loss
@@ -207,7 +211,7 @@ class DefaultRunManager:
         results["run duration"] = run_duration
 
         # Record hyper-params into 'results'
-        for k, v in self.run.params.asdict().items(): results[k] = v
+        for k, v in self.run.params._asdict().items(): results[k] = v
         self.run.data.append(results)
         df: DataFrame = pd.DataFrame.from_dict(self.run.data, orient='columns')
 
@@ -215,8 +219,22 @@ class DefaultRunManager:
         clear_output(wait=True)
         display(df)
 
+    def histogram_tensorboard(self, network) -> NoReturn:
+        """
+        Projects histogram to the tensorboard.
+        :param network: Articial Neural Network created by Pytorch.
+        :return: None
+        """
+        for name, param in network.named_parameters():
+            self.tb.add_histogram(f'{name} discriminator', param, self.epoch.count)
+            if param.grad is None:
+                self.tb.add_histogram(f'{name}.grad', 0, self.epoch.count)
+                Warning(f"!!! {network} Zero gradient occured. Caution for UNDERFITTING !!!")
+            else:
+                self.tb.add_histogram(f'{name}.grad', param.grad, self.epoch.count)
+
     # accumulate loss of batch into entire epoch loss
-    # @torch.no_grad()
+    @torch.no_grad()
     def track_loss(self, loss):
         """
         Tracks loss function for loss for each epoch
@@ -227,7 +245,7 @@ class DefaultRunManager:
         self.epoch.loss += loss.item() * self.loader.batch_size
 
     # accumulate number of corrects of batch into entire epoch num_correct
-    # @torch.no_grad()
+    @torch.no_grad()
     def track_num_correct(self, preds, labels):
         """
         Takes predictions and labels
@@ -239,7 +257,7 @@ class DefaultRunManager:
         """
         self.epoch.num_correct += self._get_num_correct(preds, labels)
 
-    # @torch.no_grad()
+    @torch.no_grad()
     def _get_num_correct(self, preds, labels):
         """
         Takes predictions and labels
@@ -292,6 +310,9 @@ class DefaultTrainBuilder:
             self.data_loader = AudioDataset(input_dir=audio_dir, output_dir=output_dir)
             self.base_trainer = DefaultTrainer(self.netG, self.netD, self.optimizerG, self.optimizerD, gan_type,
                                                self.data_loader)
+            manager = DefaultRunManager(gan_type.discriminator, gan_type.generator, self.test_iter)
+            gan_type.manager = manager
+
             self.train_iter = self.base_trainer.train_iter
             self.valid_iter = self.base_trainer.valid_iter
             self.test_iter = self.base_trainer.test_iter
@@ -303,9 +324,11 @@ class DefaultTrainBuilder:
             self.dataset = [self.train_iter, self.valid_iter, self.test_iter]
 
             gan_type: WaveGan_GP = WaveGan_GP(self.train_iter, self.valid_iter)
+            self.base_trainer = gan_type
+            manager = DefaultRunManager(gan_type.discriminator, gan_type.generator, self.test_iter)
+            gan_type.manager = manager
             self.netD, self.netG = gan_type.discriminator, gan_type.generator
             self.set_nets(self.netD, self.netG)
-            self.base_trainer = gan_type
             # self.base_trainer.train()
             # visualize_loss(self.base_trainer.g_cost, self.base_trainer.valid_g_cost, 'Train', 'Val', 'Negative Critic Loss')
             # latent_space_interpolation(self.base_trainer.generator, n_samples=5)
@@ -313,7 +336,7 @@ class DefaultTrainBuilder:
         else:
             print("I don't know your GAN. Make your own")
 
-        self.m = DefaultRunManager(gan_type.discriminator, gan_type.generator, self.test_iter)  # m indicates manager
+        self.m = manager  # m indicates manager
 
     # TODO! keras like evaluate function to measure accuracy
     def evaluate(self):

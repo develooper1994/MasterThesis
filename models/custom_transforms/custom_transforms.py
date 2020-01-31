@@ -39,16 +39,16 @@ class PhaseShuffle(nn.Module):
         # Make a copy of x for our output
         x_shuffle = x.clone()
 
-        # is a_list_unique sort important?
+        # is k_list_unique sort important?
         # a = k_list  # torch.zeros(x.shape[0]).random_(0, 2 * self.shift_factor + 1) - self.shift_factor
-        a_list_unique = k_list.unique()
-        for a_unique in a_list_unique:
-            indices = (k_list == a_unique).nonzero().squeeze()
+        k_list_unique = k_list.unique()
+        for k_unique in k_list_unique:
+            idxs = (k_list == k_unique).nonzero().squeeze()
             # TODO: Pytorch jit throws "TracerWarning" due to Python style indexing.
-            if a_unique.gt(torch.tensor(0)):  # a_unique > 0:  # Throws trace warning.
-                x_shuffle[indices] = F.pad(x[indices][..., :-a_unique], (a_unique, 0), mode='reflect')
+            if k_unique.gt(torch.tensor(0)):  # k_unique > 0:  # Throws trace warning.
+                x_shuffle[idxs] = F.pad(x[idxs][..., :-k_unique], (k_unique, 0), mode='reflect')
             else:
-                x_shuffle[indices] = F.pad(x[indices][..., -a_unique:], (0, -a_unique), mode='reflect')
+                x_shuffle[idxs] = F.pad(x[idxs][..., -k_unique:], (0, -k_unique), mode='reflect')
 
         # Pytorch jit assertation not supported.
         # assert x_shuffle.shape == x.shape, "{}, {}".format(x_shuffle.shape,
@@ -58,7 +58,7 @@ class PhaseShuffle(nn.Module):
         # # ORIGINAL
         # k_list = k_list.numpy().astype(int)
         # # Groups same k_list values' indicies
-        # # Combine sample indices into lists so that less shuffle operations
+        # # Combine sample idxs into lists so that less shuffle operations
         # # need to be performed
         # # TODO: This part isn't jitable. Make it jitable
         # k_map = {}

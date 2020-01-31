@@ -77,7 +77,7 @@ LOGGER.setLevel(logging.DEBUG)
 #############################
 # Torch Init and seed setting
 #############################
-cuda = torch.cuda.is_available()
+cuda: bool = torch.cuda.is_available()
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 # update the seed
 manual_seed: int = 2020  # 2019

@@ -26,7 +26,8 @@ class WaveGan_GP(object):
     discriminator: WaveGANDiscriminator
     generator: WaveGANGenerator
 
-    def __init__(self, train_loader: object, val_loader: object, validate: object = True, use_batchnorm: object = False) -> object:
+    def __init__(self, train_loader: object, val_loader: object, validate: object = True,
+                 use_batchnorm: object = False) -> object:
         """
 
         :rtype: object
@@ -59,7 +60,7 @@ class WaveGan_GP(object):
         self.validate = validate
         self.n_samples_per_batch = len(train_loader)
 
-        self.m = DefaultRunManager(self.discriminator, self.generator, self.val_loader)
+        self._manager = DefaultRunManager(self.discriminator, self.generator, self.val_loader)
 
     def calculate_discriminator_loss(self, real, generated):
         disc_out_gen = self.discriminator(generated)
@@ -120,7 +121,9 @@ class WaveGan_GP(object):
 
     def train_all_epochs(self, first_iter, fixed_noise, gan_model_name, progress_bar):
         for iter_indx in range(first_iter, n_iterations):
+            self._manager.begin_epoch()
             self.train_one_epoch(fixed_noise, gan_model_name, iter_indx, progress_bar)
+            # self._manager.end_epoch()
 
     def train_one_epoch(self, fixed_noise, gan_model_name, iter_indx, progress_bar):
         global disc_cost, disc_wd, generated
@@ -147,7 +150,8 @@ class WaveGan_GP(object):
         self.optimizerG.step()
         return generator_cost
 
-    def finish_iteration(self, disc_cost, disc_wd, fixed_noise, gan_model_name, generator_cost, iter_indx, progress_bar):
+    def finish_iteration(self, disc_cost, disc_wd, fixed_noise, gan_model_name, generator_cost, iter_indx,
+                         progress_bar):
         self.cost_store_every(disc_cost, disc_wd, generator_cost, iter_indx, progress_bar)
         if iter_indx % progress_bar_step_iter_size == 0:
             progress_bar.update()
@@ -224,6 +228,9 @@ class WaveGan_GP(object):
             self.train_d_cost.append(disc_cost.item())
             self.train_w_distance.append(disc_wd.item() * -1)
 
+            self._manager.epoch.loss_list = [disc_wd, generator_cost]
+            self._manager.end_epoch()
+
             progress_updates = {'Loss_D WD': str(self.train_w_distance[-1]), 'Loss_G': str(self.g_cost[-1]),
                                 'Val_G': str(self.valid_g_cost[-1])}
             progress_bar.set_postfix(progress_updates)
@@ -257,6 +264,20 @@ class WaveGan_GP(object):
                 'g_cost': self.g_cost
             }
             torch.save(saving_dict, gan_model_name)
+
+    @property
+    def manager(self):
+        return self._manager
+
+    @manager.setter
+    def manager(self, value):
+        self._manager = value
+
+    @manager.deleter
+    def manager(self):
+        del self._manager
+
+
 
 if __name__ == '__main__':
     print("Training Started")

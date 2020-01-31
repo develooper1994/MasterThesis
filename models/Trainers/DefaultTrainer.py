@@ -226,6 +226,14 @@ class DefaultTrainer:
         TrainingUtility.last_touch(self.GAN, self.D, self.G, output_dir, self.D_costs_train, self.D_wasses_train,
                                    self.D_costs_valid, self.D_wasses_valid, self.G_costs)
 
+    @property
+    def manager(self):
+        return self.manager
+
+    @manager.setter
+    def manager(self, m):
+        self.manager = m
+
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Don't REMOVE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # def _critic_train_iteration(self, data):
     #     """ """
