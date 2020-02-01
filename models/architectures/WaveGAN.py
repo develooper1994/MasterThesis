@@ -11,7 +11,11 @@ wave_gan_utils = WaveGANUtils()
 
 
 class WaveGAN:
-    def __init__(self):
+    def __init__(self) -> None:
+        """
+
+        :rtype: 
+        """
         self.Logger = file_logger('wavegan')
         self.Logger.start()
 
@@ -22,7 +26,7 @@ class WaveGAN:
         # network
         self.generator, self.discriminator = wave_gan_utils.create_network(self.model_size)
 
-        # "Two time-scale update rule"(TTUR) to update netD 4x faster than netG.
+        # "Two time-scale update rule"(TTUR) to update discriminator 4x faster than generator.
         self.optimizerD, self.optimizerG = wave_gan_utils.optimizers(arguments)
 
         # Sample noise used for generated output.
@@ -60,7 +64,7 @@ class WaveGAN:
     #             # (1) Train Discriminator (n_discriminate_train times)
     #             #############################
     #             # Set Discriminators parameters to require gradients.
-    #             require_net_update(self.netD)
+    #             require_net_update(self.discriminator)
     #
     #             one = torch.tensor(1, dtype=torch.float)
     #             neg_one = torch.tensor(-1, dtype=torch.float)
@@ -115,23 +119,23 @@ class WaveGAN:
     #                                 D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch)
     #
     # def train_discriminator_once(self, neg_one, one):
-    #     self.netD.zero_grad()
+    #     self.discriminator.zero_grad()
     #     # Noise
     #     noise = torch.Tensor(self.batch_size, self.latent_dim).uniform_(-1, 1)
     #     noise = noise.to(device)
     #     noise.requires_grad = False  # noise_Var = Variable(noise, requires_grad=False)
     #     real_data_Var = numpy_to_var(next(self.train_iter)['X'])
     #     # a) compute loss contribution from real training data
-    #     D_real = self.netD(real_data_Var)
+    #     D_real = self.discriminator(real_data_Var)
     #     D_real = D_real.mean()  # avg loss
     #     D_real.backward(neg_one)  # loss * -1
     #     # b) compute loss contribution from generated data, then backprop.
-    #     fake = autograd.Variable(self.netG(noise).data)  # noise_Var
-    #     D_fake = self.netD(fake)
+    #     fake = autograd.Variable(self.generator(noise).data)  # noise_Var
+    #     D_fake = self.discriminator(fake)
     #     D_fake = D_fake.mean()
     #     D_fake.backward(one)
     #     # c) compute gradient penalty and backprop
-    #     gradient_penalty = calc_gradient_penalty(self.netD, real_data_Var.data,
+    #     gradient_penalty = calc_gradient_penalty(self.discriminator, real_data_Var.data,
     #                                              fake.data, self.batch_size, self.lmbda,
     #                                              device=device)
     #     gradient_penalty.backward(one)
@@ -142,19 +146,19 @@ class WaveGAN:
     #     return noise
     #
     # def compute_valid_data(self, noise, D_cost_train_epoch, D_wass_train_epoch, D_cost_valid_epoch, D_wass_valid_epoch):
-    #     self.netD.zero_grad()
+    #     self.discriminator.zero_grad()
     #
     #     valid_data_Var = numpy_to_var(next(self.valid_iter)['X'])
-    #     D_real_valid = self.netD(valid_data_Var)
+    #     D_real_valid = self.discriminator(valid_data_Var)
     #     D_real_valid = D_real_valid.mean()  # avg loss
     #
     #     # b) compute loss contribution from generated data, then backprop.
-    #     fake_valid = self.netG(noise)  # noise_Var
-    #     D_fake_valid = self.netD(fake_valid)
+    #     fake_valid = self.generator(noise)  # noise_Var
+    #     D_fake_valid = self.discriminator(fake_valid)
     #     D_fake_valid = D_fake_valid.mean()
     #
     #     # c) compute gradient penalty and backprop
-    #     gradient_penalty_valid = calc_gradient_penalty(self.netD, valid_data_Var.data,
+    #     gradient_penalty_valid = calc_gradient_penalty(self.discriminator, valid_data_Var.data,
     #                                                    fake_valid.data, self.batch_size, self.lmbda,
     #                                                    device=device)
     #
@@ -164,18 +168,18 @@ class WaveGAN:
     #                                      D_wass_valid_epoch)
     #
     # def train_generator_once(self, neg_one, G_cost_epoch, start, epoch, i):
-    #     prevent_net_update(self.netD)
+    #     prevent_net_update(self.discriminator)
     #
     #     # Reset generator gradients
-    #     self.netG.zero_grad()
+    #     self.generator.zero_grad()
     #
     #     # Noise
     #     noise = torch.tensor(self.batch_size, self.latent_dim).uniform_(-1, 1)
     #     noise = noise.to(device)
     #     noise.requires_grad = False  # noise_Var = Variable(noise, requires_grad=False)
     #
-    #     fake = self.netG(noise)  # noise_Var
-    #     G = self.netD(fake)
+    #     fake = self.generator(noise)  # noise_Var
+    #     G = self.discriminator(fake)
     #     G = G.mean()
     #
     #     # Update gradients.
@@ -198,7 +202,7 @@ class WaveGAN:
     #     calculate metrics, ...
     #     :return: None
     #     """
-    #     utls_basic.save_models(self.output_dir, self.netD, self.netG)
+    #     utls_basic.save_models(self.output_dir, self.discriminator, self.generator)
     #     self.Logger.save_loss_curve()
     #     # Plot loss curve.
     #     plot_loss(self.D_costs_train, self.D_wasses_train,

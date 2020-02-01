@@ -9,13 +9,13 @@ from torch import nn
 import tensorboard
 import numpy as np
 import matplotlib
-
-matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 # my libraries
 from models.utils.BasicUtils import torch_image_to_numpy_image, rgb2gray
 from models.utils.BasicUtils import data_getters
+
+matplotlib.use('agg')
 
 class matplotlib_visualization:
     def plot_loss(self, D_cost_train, D_wass_train, D_cost_valid, D_wass_valid,

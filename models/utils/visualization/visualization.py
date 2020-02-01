@@ -15,6 +15,8 @@ import tensorboard
 import numpy as np
 import matplotlib
 
+from models.utils.BasicUtils import torch_image_to_numpy_image, rgb2gray
+
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 

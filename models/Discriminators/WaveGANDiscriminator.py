@@ -8,7 +8,7 @@ from models.layers.BaseLayers import Conv1D
 
 class WaveGANDiscriminator(nn.Module):
     def __init__(self, model_size: int =64, ngpus: int = 1, num_channels: int = 1, shift_factor: int = 2,
-                 alpha: float = 0.2, verbose: bool = False, slice_len: int = 16384, use_batch_norm: bool = False):
+                 alpha: float = 0.2, verbose: bool = False, slice_len: int = 16384, use_batch_norm: bool = False) -> None:
         super(WaveGANDiscriminator, self).__init__()
         assert slice_len in [16384, 32768, 65536]  # used to predict longer utterances
 

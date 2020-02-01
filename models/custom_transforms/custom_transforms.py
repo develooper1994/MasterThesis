@@ -46,11 +46,11 @@ class PhaseShuffle(nn.Module):
             idxs = (k_list == k_unique).nonzero().squeeze()
             # TODO: Pytorch jit throws "TracerWarning" due to Python style indexing.
             if k_unique.gt(torch.tensor(0)):  # k_unique > 0:  # Throws trace warning.
-                x_shuffle[idxs] = F.pad(x[idxs][..., :-k_unique], (k_unique, 0), mode='reflect')
+                x_shuffle[idxs] = F.pad(x[idxs][..., :-k_unique], [k_unique, 0], mode='reflect')
             else:
-                x_shuffle[idxs] = F.pad(x[idxs][..., -k_unique:], (0, -k_unique), mode='reflect')
+                x_shuffle[idxs] = F.pad(x[idxs][..., -k_unique:], [0, -k_unique], mode='reflect')
 
-        # Pytorch jit assertation not supported.
+        # Pytorch jit assertion not supports.
         # assert x_shuffle.shape == x.shape, "{}, {}".format(x_shuffle.shape,
         #                                                    x.shape)
         return x_shuffle

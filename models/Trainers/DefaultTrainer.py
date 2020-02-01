@@ -1,3 +1,4 @@
+# This trainer faster but not good as WaveganTrainer.py
 # inspired from https://github.com/EmilienDupont/wgan-gp/blob/master/training.py
 # Standart library
 import time

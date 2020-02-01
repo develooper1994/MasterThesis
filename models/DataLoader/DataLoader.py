@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 # my modules
-from config import OUTPUT_PATH, device, target_signals_dir
+from config import output_dir, device, target_signals_dir
 from models.DataLoader.AudioDataset import AudioDataset
 from models.utils.BasicUtils import get_recursive_files, create_stream_reader
 
@@ -96,7 +96,7 @@ class Dataset:
 
         elif self.basic_types.lower() == 'audio':
             print("Not completed yet!!!")
-            train_dataset = AudioDataset(self.train_dir, OUTPUT_PATH, data_transform, audio_sample_num)
+            train_dataset = AudioDataset(self.train_dir, output_dir, data_transform, audio_sample_num)
             train_loader = DataLoader(train_dataset, batch_size=bs, shuffle=self.shuffle, num_workers=num_workers)
 
             returns = train_loader
@@ -111,7 +111,7 @@ class WavDataLoader:
     data_iter: Iterator[Dict[Any, Union[Union[ndarray, ndarray, ndarray], Any]]]
     signal_paths: List[Union[bytes, str]]
 
-    def __init__(self, folder_path: object, audio_extension: object = 'wav') -> object:
+    def __init__(self, folder_path: object, audio_extension: object = 'wav') -> NoReturn:
         self.signal_paths, self.signal_label = get_recursive_files(folder_path, audio_extension)
         self.data_iter = None
         self.initialize_iterator()

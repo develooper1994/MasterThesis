@@ -1,9 +1,9 @@
 import torch
-from torch import optim
 
+from models.optimizers.BaseOptimizer import optimizers
 # File Logger Configfuration
 from models.utils.BasicUtils import parallel_models
-from models.optimizers.BaseOptimizer import optimizers
+
 
 # TODO: write document for each function.
 

@@ -11,14 +11,14 @@ import pescador
 import torch
 import torchaudio as to
 
-from config import DATASET_NAME, WINDOW_LENGHT, FS
+from config import target_signals_dir, window_length, sampling_rate
 from models.utils.BasicUtils import make_path
 from models.utils.WaveGANUtils import WaveGANUtils  # LOGGER
 
 
 # ============================================================
 # TODO: replace librosa with torchaudio
-def save_samples(epoch_samples, epoch, output_dir, fs=FS) -> None:
+def save_samples(epoch_samples, epoch, output_dir, fs=sampling_rate) -> None:
     """
     Save output samples for each iteration to examine progress
     :param epoch_samples: samples for each iteration
@@ -37,7 +37,7 @@ def save_samples(epoch_samples, epoch, output_dir, fs=FS) -> None:
 
 # TODO: replace librosa with torchaudio
 # Adapted from @jtcramer https://github.com/jtcramer/wavegan/blob/master/sample.py.
-def sample_generator(filepath, window_length=WINDOW_LENGHT, fs=FS):
+def sample_generator(filepath, window_length=window_length, fs=sampling_rate):
     """
     Audio sample generator from dataset
     :param filepath: Full path for dataset
@@ -136,7 +136,7 @@ def split_data(audio_path_list, valid_ratio, test_ratio, batch_size):
     num_train = num_files - num_valid - num_test
 
     if num_valid <= 0 or num_test <= 0 or num_train <= 0:
-        WaveGANUtils.LOGGER.error("Please download DATASET '{}' and put it under current path !".format(DATASET_NAME))
+        WaveGANUtils.LOGGER.error("Please download DATASET '{}' and put it under current path !".format(target_signals_dir))
 
     # Random shuffle the audio_path_list for splitting.
     random.shuffle(audio_path_list)

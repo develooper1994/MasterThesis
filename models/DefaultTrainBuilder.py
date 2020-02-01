@@ -3,8 +3,7 @@ import datetime
 import json
 import os
 import time
-from collections import OrderedDict, namedtuple
-from itertools import product  # cartesian product
+from collections import OrderedDict
 from typing import List, Any, NoReturn, Union
 
 import pandas as pd
@@ -16,7 +15,8 @@ from pandas import DataFrame
 from torch.utils.tensorboard import SummaryWriter
 
 # my modules
-from config import target_signals_dir, batch_size, generator_batch_size_factor, device
+from config import target_signals_dir, batch_size, generator_batch_size_factor, device, n_iterations, \
+    progress_bar_step_iter_size, RunBuilder, Runs
 from models.DataLoader.AudioDataset import AudioDataset
 from models.DataLoader.DataLoader import WavDataLoader
 from models.Trainers.DefaultTrainer import DefaultTrainer
@@ -29,25 +29,6 @@ from models.utils.BasicUtils import visualize_loss, latent_space_interpolation, 
 # other 3rd party libraries
 
 
-class RunBuilder:
-    """
-    Takes all parameters with variable names and values and insert into a list
-    """
-
-    @staticmethod
-    def get_runs(params) -> List[Any]:
-        """
-        Takes parameters and makes first it dictionary.
-        Second appends all values or keys of variable in to a list.
-        @param params: takes an OrderedDict to try all experiments in one loop and also to show results on any report.
-        @return: list of values or keys of variable
-
-        """
-        Run = namedtuple('Run', params.keys())
-
-        return [Run(*v) for v in product(*params.values())]
-
-
 class Epoch:
     """
     Refactored epoch variables
@@ -56,7 +37,7 @@ class Epoch:
     loss: int
     num_correct: int
 
-    def __init__(self, count=0, loss_list=None, num_correct=0, start_time=0):
+    def __init__(self, count=n_iterations // progress_bar_step_iter_size, loss_list=None, num_correct=0, start_time=0):
         if loss_list is None:
             loss_list = []
         self.count = count
@@ -82,17 +63,21 @@ class Run:
         self.start_time = start_time
 
 
+# TODO: Implement for all gan types
 class DefaultRunManager:
     """
     Controls all learning process functions and utilities like visualization and taking checkpoint
     """
     run: Run
 
-    def __init__(self, discriminator, generator, loader):
+    # def __init__(self, loader, discriminator, generator):
+    def __init__(self, loader, **networks):
         # tracking every epoch count, loss, accuracy, time
 
-        self.netG = generator
-        self.netD = discriminator
+        self.base_trainer = None
+        self.networks_names = list(networks.keys())
+        self.networks = list(networks.values())
+        self.numer_networks = len(self.networks)
         self.epoch = Epoch()
 
         # tracking every run count, run data, hyper-params used, time
@@ -124,16 +109,18 @@ class DefaultRunManager:
         # one batch data
         waveforms, labels = next(iter(self.loader))
         specgrams = torchaudio.transforms.Spectrogram()(waveforms.cpu())  # I don't it will write with iterator
-        # grid = torchvision.utils.make_grid(specgrams)
-
         # # Tensorboard configuration
-        self.tb = SummaryWriter(comment=f'-{run}')  # MOST TIME CONSUMING PART. don't remove or change.
+        tensorboard_file_name = f"target_signals_dir:{target_signals_dir}_n_iterations:{run.n_iterations}" \
+        f"_lr_d:{run.lr_d}_lr_g:{run.lr_g}_beta1:{run.beta1}_beta2:{run.beta2}_decay_lr:{run.decay_lr}" \
+        f"_n_critic:{run.n_critic}_p_coeff:{run.p_coeff}_noise_latent_dim:{run.noise_latent_dim}" \
+        f"_model_capacity_size:{run.model_capacity_size}"  # Tensorboard throws File name too long for full name.
+        self.tb = SummaryWriter(comment=f'-{tensorboard_file_name}')  # MOST TIME CONSUMING PART. don't remove or change.
         self.tb.add_image('images', specgrams[0])
         # TODO: Second graph overrides.
-        self.tb.add_graph(self.netD, waveforms)
-        # (noise_latent_dim, 4 * 4 * model_size * self.dim_mul)
         fix_noise = sample_noise(batch_size * generator_batch_size_factor).to(device)
-        self.tb.add_graph(self.netG, fix_noise)
+        for net_name, net in zip(self.networks_names, self.networks):
+            graphs_input = fix_noise if net_name is 'generator' else waveforms
+            self.tb.add_graph(net, graphs_input)
 
     # when run ends, close TensorBoard, zero epoch count
     def end_run(self):
@@ -145,13 +132,14 @@ class DefaultRunManager:
         self.tb.flush()
         self.tb.close()
         self.epoch.count = 0
-        visualize_loss(self.base_trainer.g_cost, self.base_trainer.valid_g_cost, 'Train', 'Val', 'Negative Critic Loss')
+        visualize_loss(y_label='generator', legends=['Train', 'Val'],
+                       losses=[self.base_trainer.g_cost, self.base_trainer.valid_g_cost])
         latent_space_interpolation(self.base_trainer.generator, n_samples=5)
 
     # zero epoch count, loss, accuracy,
     # TODO! refactor begin_epoch and end_epoch functions
     @torch.no_grad()
-    def begin_epoch(self) -> NoReturn:
+    def begin_epoch(self) -> None:
         """
         Takes nothing
         Configures and gives a start the one epoch experiment.
@@ -190,16 +178,14 @@ class DefaultRunManager:
             loss = loss / len(self.loader)
 
             # Record epoch loss and accuracy to TensorBoard
-            self.tb.add_scalar(f'Loss_{count}', loss, self.epoch.count)
+            self.tb.add_scalar(f'Loss_{self.networks[count]}', loss, self.epoch.count)  # self.networks_names[count]...
 
         # accuracy = self.epoch.num_correct / len(self.loader.dataset)
         accuracy = self.epoch.num_correct / len(self.loader)
         self.tb.add_scalar('Accuracy', accuracy, self.epoch.count)
 
-        # Record discriminator params to TensorBoard
-        self.histogram_tensorboard(self.netD)
-        # Record generator params to TensorBoard
-        self.histogram_tensorboard(self.netG)
+        # Record discriminator and generator or something else params to TensorBoard
+        self.histogram_tensorboard(self.networks, self.tb)
 
         # Write into 'results' (OrderedDict) for all run related data
         results: OrderedDict[Union[str, Any], Union[Union[int, float], Any]] = OrderedDict()
@@ -219,19 +205,21 @@ class DefaultRunManager:
         clear_output(wait=True)
         display(df)
 
-    def histogram_tensorboard(self, network) -> NoReturn:
+    def histogram_tensorboard(self, network, tensorboard_sessions) -> None:
         """
         Projects histogram to the tensorboard.
+        :param tensorboard_sessions: Logging Tensorboard session object.
         :param network: Articial Neural Network created by Pytorch.
         :return: None
         """
-        for name, param in network.named_parameters():
-            self.tb.add_histogram(f'{name} discriminator', param, self.epoch.count)
-            if param.grad is None:
-                self.tb.add_histogram(f'{name}.grad', 0, self.epoch.count)
-                Warning(f"!!! {network} Zero gradient occured. Caution for UNDERFITTING !!!")
-            else:
-                self.tb.add_histogram(f'{name}.grad', param.grad, self.epoch.count)
+        for net_name, net in zip(self.networks_names, self.networks):
+            for name, param in net.named_parameters():
+                tensorboard_sessions.add_histogram(f'{name} {net_name}', param, self.epoch.count)
+                if param.grad is None:
+                    tensorboard_sessions.add_histogram(f'{name}.grad', 0, self.epoch.count)
+                    Warning(f"!!! {network} Zero gradient occured. Caution for UNDERFITTING !!!")
+                else:
+                    tensorboard_sessions.add_histogram(f'{name}.grad', param.grad, self.epoch.count)
 
     # accumulate loss of batch into entire epoch loss
     @torch.no_grad()
@@ -298,19 +286,20 @@ class DefaultTrainBuilder:
         self.number_of_experiments = 0
         self.network = None
         # self.m = DefaultRunManager(self.network)  # m indicates manager
+        self._discriminator, self._generator = None, None
         self.optimizerD, self.optimizerG = None, None
-        self.epochs = 1
 
         print(f"using {GAN} trainer")
         if GAN == "wavegan":
             gan_type: WaveGAN = WaveGAN()
-            self.netD, self.netG = gan_type.discriminator, gan_type.generator  # WaveGANDiscriminator, WaveGANGenerator
+            self.discriminator, self.generator = gan_type.discriminator, gan_type.generator  # WaveGANDiscriminator, WaveGANGenerator
             self.optimizerD, self.optimizerG = gan_type.optimizerD, gan_type.optimizerG  # wave_gan_utils.optimizers(arguments)
-            self.set_nets(self.netD, self.netG)
+            # self.set_nets(self.discriminator, self.generator)
             self.data_loader = AudioDataset(input_dir=audio_dir, output_dir=output_dir)
-            self.base_trainer = DefaultTrainer(self.netG, self.netD, self.optimizerG, self.optimizerD, gan_type,
+            self.base_trainer = DefaultTrainer(self.generator, self.discriminator, self.optimizerG, self.optimizerD, gan_type,
                                                self.data_loader)
-            manager = DefaultRunManager(gan_type.discriminator, gan_type.generator, self.test_iter)
+            manager = DefaultRunManager(self.test_iter, discriminator=gan_type.discriminator,
+                                        generator=gan_type.generator)
             gan_type.manager = manager
 
             self.train_iter = self.base_trainer.train_iter
@@ -325,10 +314,12 @@ class DefaultTrainBuilder:
 
             gan_type: WaveGan_GP = WaveGan_GP(self.train_iter, self.valid_iter)
             self.base_trainer = gan_type
-            manager = DefaultRunManager(gan_type.discriminator, gan_type.generator, self.test_iter)
+            manager = DefaultRunManager(self.test_iter, discriminator=gan_type.discriminator,
+                                        generator=gan_type.generator)
             gan_type.manager = manager
-            self.netD, self.netG = gan_type.discriminator, gan_type.generator
-            self.set_nets(self.netD, self.netG)
+            self.discriminator, self.generator = gan_type.discriminator, gan_type.generator
+            # self.set_nets(self.discriminator, self.generator)
+
             # self.base_trainer.train()
             # visualize_loss(self.base_trainer.g_cost, self.base_trainer.valid_g_cost, 'Train', 'Val', 'Negative Critic Loss')
             # latent_space_interpolation(self.base_trainer.generator, n_samples=5)
@@ -349,7 +340,7 @@ class DefaultTrainBuilder:
         pass
 
     # TODO! keras like compile and train. Complete keras fit
-    def fit(self, data_sets, run=RunBuilder.get_runs(OrderedDict(lr=[.01], batch_size=[1000], shuffle=[True]))[0],
+    def fit(self, data_sets, run=Runs,
             validation=False):
         """
         It is just a simple trainer
@@ -404,7 +395,7 @@ class DefaultTrainBuilder:
         self.base_trainer.train()
         # self.all_epochs(self.train_iter)
 
-    def experiments(self, runs) -> NoReturn:
+    def experiments(self, runs=Runs) -> NoReturn:
         # start experiments with parameters
         for run in runs:
             # if params changes, following line of code should reflect the changes too
@@ -421,11 +412,12 @@ class DefaultTrainBuilder:
             ## Experiments Start ##
             self.m.begin_run(run)
             # self.all_epochs(self.train_iter)
+            self.base_trainer.hyperparameters = run
             self.base_trainer.train()
             ## Experiments End ##
             self.m.end_run()
 
-    def wrap_experiments(self, params, epochs: int) -> NoReturn:
+    def wrap_experiments(self) -> NoReturn:
         """
         Put all to gather
         @param params: hyperparameters for experiment
@@ -439,9 +431,8 @@ class DefaultTrainBuilder:
         @return: None
         """
         # get all runs from params using RunBuilder class
-        runs = RunBuilder.get_runs(params)
-        self.epochs = epochs
-        self.number_of_experiments = len(runs) * epochs
+        runs = Runs
+        self.number_of_experiments = len(runs) * self.epochs
         print(f"number of experiments or rows: {self.number_of_experiments}")
 
         # start experiments with parameters
@@ -453,27 +444,52 @@ class DefaultTrainBuilder:
         self.m.save('results')
         print("End of all training experiments")
 
-    def train_experiments(self, params):
-        self.wrap_experiments(params=params, epochs=self.epochs)
+    def train_experiments(self):
+        self.wrap_experiments()
 
     ######################
     # Getters and Stetters
     ######################
-    def set_discriminator(self, netD):
-        self.netD = netD
 
-    def get_discriminator(self):
-        return self.netD
+    @property
+    def discriminator(self):
+        return self._discriminator
 
-    def set_generator(self, netG):
-        self.netG = netG
+    @discriminator.setter
+    def discriminator(self, net):
+        self._discriminator = net
 
-    def get_generator(self):
-        return self.netG
+    @discriminator.deleter
+    def discriminator(self):
+        del self._discriminator
 
-    def set_nets(self, netD, netG):
-        self.set_generator(netD)
-        self.set_generator(netG)
+    @property
+    def generator(self):
+        return self._generator
 
-    def get_nets(self):
-        return self.get_discriminator(), self.get_generator()
+    @generator.setter
+    def generator(self, net):
+        self._generator = net
+
+    @generator.deleter
+    def generator(self):
+        del self._generator
+
+    # def set_discriminator(self, discriminator):
+    #     self.discriminator = discriminator
+    #
+    # def get_discriminator(self):
+    #     return self.discriminator
+    #
+    # def set_generator(self, generator):
+    #     self.generator = generator
+    #
+    # def get_generator(self):
+    #     return self.generator
+    #
+    # def set_nets(self, discriminator, generator):
+    #     self.set_generator(discriminator)
+    #     self.set_generator(generator)
+    #
+    # def get_nets(self):
+    #     return self.get_discriminator(), self.get_generator()

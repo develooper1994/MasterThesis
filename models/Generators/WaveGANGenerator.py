@@ -16,7 +16,7 @@ class WaveGANGenerator(nn.Module):
 
     def __init__(self, model_size: int = 64, num_channels: int = 1,
                      verbose: bool = False, upsample=True, slice_len: int = 16384,
-                     use_batch_norm: bool = False) -> NoReturn:
+                     use_batch_norm: bool = False) -> None:
         """
         Generator network initialized
         :param model_size: Size of model for flat input

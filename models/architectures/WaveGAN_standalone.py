@@ -38,7 +38,7 @@ class WaveGAN_standalone:
         # network
         self.netG, self.netD = wave_gan_utils.create_network(self.model_size, self.ngpus, self.latent_dim)
 
-        # "Two time-scale update rule"(TTUR) to update netD 4x faster than netG.
+        # "Two time-scale update rule"(TTUR) to update discriminator 4x faster than generator.
         self.optimizerG, self.optimizerD = wave_gan_utils.optimizers(arguments)
 
         # Sample noise used for generated output.

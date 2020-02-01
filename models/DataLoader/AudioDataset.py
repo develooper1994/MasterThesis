@@ -6,26 +6,24 @@ import librosa
 import numpy as np
 import pescador
 import torch
-from torch.utils.data import Dataset, DataLoader
 import torchaudio
-from torchaudio import datasets, transforms
+from torch.utils.data import Dataset
 
-from config import DATASET_NAME, OUTPUT_PATH, SAMPLE_NUM, WINDOW_LENGHT, FS, EPOCHS
+from config import target_signals_dir, output_dir, sampling_rate, window_length, sampling_rate
 from models.utils.BasicUtils import make_path
-from models.Trainers.DefaultTrainer import audio_dir, output_dir, batch_size
 # from models.utils.wave_gan_utils import LOGGER as L  # ImportError: cannot import name 'LOGGER' from
 # 'models.utils.wave_gan_utils'
 from models.utils.WaveGANUtils import WaveGANUtils
 
 
 class AudioDataset(Dataset):
-    def __init__(self, input_dir=None, output_dir=None, input_transform=None, audio_number_samples=SAMPLE_NUM):
+    def __init__(self, input_dir=None, output_dir=None, input_transform=None, audio_number_samples=sampling_rate):
         self.input_dir = input_dir
         if input_dir is None:
-            self.input_dir = DATASET_NAME
+            self.input_dir = target_signals_dir
         self.output_dir = output_dir
         if output_dir is None:
-            self.output_dir = OUTPUT_PATH
+            self.output_dir = output_dir
         self.input_transform = input_transform
         self.num_samples = audio_number_samples
 
@@ -85,7 +83,7 @@ class AudioDataset(Dataset):
                 for label in paths]
 
     # TODO: replace librosa with torchaudio
-    def save_samples(self, epoch, epoch_samples, fs=FS) -> None:
+    def save_samples(self, epoch, epoch_samples, fs=sampling_rate) -> None:
         """
         Save output samples for each iteration to examine progress
         :param epoch: iteration number
@@ -101,7 +99,7 @@ class AudioDataset(Dataset):
 
     # Adapted from @jtcramer https://github.com/jtcramer/wavegan/blob/master/sample.py.
     @staticmethod
-    def sample_generator(filepath, label, window_length=WINDOW_LENGHT, fs=FS):
+    def sample_generator(filepath, label, window_length=window_length, fs=sampling_rate):
         """
         Audio sample generator from dataset
         :param filepath: Full path for dataset
@@ -186,7 +184,7 @@ class AudioDataset(Dataset):
 
         if num_valid <= 0 or num_test <= 0 or num_train <= 0:
             WaveGANUtils.LOGGER.error(
-                "Please download DATASET '{}' and put it under current path !".format(DATASET_NAME))
+                "Please download DATASET '{}' and put it under current path !".format(target_signals_dir))
 
         # Random shuffle the audio_path_list for splitting.
         random.shuffle(audio_path_list)

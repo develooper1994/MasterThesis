@@ -40,9 +40,9 @@ class PhaseShuffle(nn.Module):
         k: int
         for k, idxs in k_map.items():
             if k > 0:
-                x_shuffle[idxs] = F.pad(x[idxs][..., :-k], (k, 0), mode='reflect')
+                x_shuffle[idxs] = F.pad(x[idxs][..., :-k], [k, 0], mode='reflect')
             else:
-                x_shuffle[idxs] = F.pad(x[idxs][..., -k:], (0, -k), mode='reflect')
+                x_shuffle[idxs] = F.pad(x[idxs][..., -k:], [0, -k], mode='reflect')
 
         assert x_shuffle.shape == x.shape, "{}, {}".format(x_shuffle.shape,
                                                            x.shape)
