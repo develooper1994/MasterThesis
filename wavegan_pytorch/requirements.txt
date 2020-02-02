@@ -1,6 +1,0 @@
-matplotlib
-numpy
-librosa
-pescador
-torch
-tqdm

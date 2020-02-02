@@ -1,23 +1,29 @@
 # This trainer slower and more resourceful(train with bigger batch_size) than DefaultTrainer.py but good for reporting.
-from typing import Type
+# Also support hyper parameter search.
+import os
+from collections import namedtuple
+from typing import Type, List, Any
 
+import torch
 import torch.optim as optim
 from torch.autograd import grad
 from torch.optim import Adam
 from tqdm import tqdm
 
-from config import *
-from config import batch_size, device, p_coeff, n_iterations, progress_bar_step_iter_size, generator_batch_size_factor, \
-    n_critic, take_backup, cuda, store_cost_every, decay_lr, lr_d, lr_g, \
-    save_samples_every, backup_every_n_iters, params
+from config import lr_d, lr_g, lr_e, window_length, model_capacity_size, num_channels, beta1, beta2, params, \
+    target_signals_dir
 from models.DataLoader.DataLoader import WavDataLoader
-from models.Discriminators.WaveGANDiscriminator import WaveGANDiscriminator
-from models.Generators.WaveGANGenerator import WaveGANGenerator
+from models.architectures.Discriminators.WaveGANDiscriminator import WaveGANDiscriminator
+from models.architectures.Generators.WaveGANGenerator import WaveGANGenerator
 from models.utils.BasicUtils import visualize_loss, latent_space_interpolation, sample_noise, save_samples, \
     update_optimizer_lr, gradients_status
+from models.utils.WaveGANUtils import WaveGANUtils
+
+wave_gan_utils = WaveGANUtils()
 
 
 class WaveGan_GP:
+    train_loader: object
     _hyperparameters: Type[tuple]
     g_cost: List[Any]
     train_d_cost: List[Any]
@@ -54,19 +60,31 @@ class WaveGan_GP:
 
         self.generated, self.disc_cost, self.disc_wd = 0, 0, 0
 
-        self.discriminator = WaveGANDiscriminator(slice_len=window_length, model_size=model_capacity_size,
-                                                  use_batch_norm=use_batchnorm, num_channels=num_channels).to(
-            device)
+        # self.discriminator = WaveGANDiscriminator(slice_len=window_length, model_size=model_capacity_size,
+        #                                           use_batch_norm=use_batchnorm, num_channels=num_channels).to(device)
+        #
+        # self.generator = WaveGANGenerator(slice_len=window_length, model_size=model_capacity_size,
+        #                                   use_batch_norm=use_batchnorm, num_channels=num_channels).to(device)
+        #
+        # self.optimizerG = optim.Adam(self.generator.parameters(), lr=lr_g,
+        #                              betas=(beta1, beta2))  # Setup Adam optimizers for both G and D
+        # self.optimizerD = optim.Adam(self.discriminator.parameters(), lr=lr_d,
+        #                              betas=(beta1, beta2))
 
-        self.generator = WaveGANGenerator(slice_len=window_length, model_size=model_capacity_size,
-                                          use_batch_norm=use_batchnorm, num_channels=num_channels).to(
-            device)
+        self.generator, self.discriminator = wave_gan_utils.create_network(slice_len=window_length,
+                                                                           model_size=model_capacity_size,
+                                                                           use_batch_norm=use_batchnorm,
+                                                                           num_channels=num_channels)
 
-        self.optimizerG = optim.Adam(self.generator.parameters(), lr=lr_g,
-                                     betas=(beta1,
-                                            beta2))  # Setup Adam optimizers for both G and D
-        self.optimizerD = optim.Adam(self.discriminator.parameters(), lr=lr_d,
-                                     betas=(beta1, beta2))
+        arguments = {
+            'learning-rate': [lr_g, lr_d, lr_e],
+            'beta-one': beta1,
+            'beta-two': beta2
+        }
+
+        self.optimizerG, self.optimizerD = wave_gan_utils.optimizers(arguments,
+                                                                     generator=self.generator,
+                                                                     discriminator=self.discriminator)
 
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -123,7 +141,6 @@ class WaveGan_GP:
         cost = cost_wd + grad_penalty
         return cost, cost_wd
 
-
     def train(self):
         progress_bar = tqdm(self.hyperparameters.n_iterations // self.hyperparameters.progress_bar_step_iter_size)
         fixed_noise = sample_noise(self.hyperparameters.batch_size).to(
@@ -178,6 +195,10 @@ class WaveGan_GP:
         self.save_samples_every(fixed_noise, iter_indx)
         self.saving_dict(gan_model_name, iter_indx)
 
+    def train_critic_all(self):
+        for _ in range(self.hyperparameters.n_critic):
+            self.train_critic_once()
+
     def train_critic_once(self):
         global generated, disc_cost, disc_wd
         real_signal, label = next(self.train_loader)
@@ -193,10 +214,6 @@ class WaveGan_GP:
         assert not (torch.isnan(disc_cost))
         disc_cost.backward()
         self.optimizerD.step()
-
-    def train_critic_all(self):
-        for _ in range(self.hyperparameters.n_critic):
-            self.train_critic_once()
 
     def start_training(self, fixed_noise, gan_model_name, progress_bar):
         first_iter = 0
@@ -220,8 +237,8 @@ class WaveGan_GP:
             checkpoint = torch.load(gan_model_name)
         else:
             checkpoint = torch.load(gan_model_name, map_location='cpu')
-        self.generator.load_state_dict(checkpoint['generator'])
-        self.discriminator.load_state_dict(checkpoint['discriminator'])
+        self.generator.module.load_state_dict(checkpoint['generator'])
+        self.discriminator.module.load_state_dict(checkpoint['discriminator'])
         self.optimizerD.load_state_dict(checkpoint['optimizer_d'])
         self.optimizerG.load_state_dict(checkpoint['optimizer_g'])
         self.train_d_cost = checkpoint['train_d_cost']

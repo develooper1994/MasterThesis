@@ -24,10 +24,10 @@ class WaveGAN:
         self.epochs_per_sample, self.lmbda, audio_dir, self.output_dir, arguments = get_params()
 
         # network
-        self.generator, self.discriminator = wave_gan_utils.create_network(self.model_size)
+        self.generator, self.discriminator = wave_gan_utils.create_network(model_size=self.model_size)
 
         # "Two time-scale update rule"(TTUR) to update discriminator 4x faster than generator.
-        self.optimizerD, self.optimizerG = wave_gan_utils.optimizers(arguments)
+        self.optimizerD, self.optimizerG = wave_gan_utils.optimizers(arguments, generator=self.generator, discriminator=self.discriminator)
 
         # Sample noise used for generated output.
         self.sample_noise = wave_gan_utils.sample_noise(arguments, self.latent_dim, device)

@@ -427,11 +427,14 @@ def creat_dump(model_dir, arguments):
 
 ## make it parallel
 def parallel_models(*nets):
-    net = []
-    for n in nets:
-        n = torch.nn.DataParallel(n).to(device)
-        net.append(n)
-    return net
+    # net = []
+    # for n in nets:
+    #     n = torch.nn.DataParallel(n).to(device)
+    #     net.append(n)
+    # return net
+    return [
+        torch.nn.DataParallel(n).to(device) for n in nets
+    ]
 
 
 ## to ... device

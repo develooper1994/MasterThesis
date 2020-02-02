@@ -1,28 +1,22 @@
 import torch
 
 from config import noise_latent_dim
-from models.Discriminators.WaveGANDiscriminator import WaveGANDiscriminator
-from models.Generators.WaveGANGenerator import WaveGANGenerator
+from models.architectures.Discriminators.WaveGANDiscriminator import WaveGANDiscriminator
+from models.architectures.Generators.WaveGANGenerator import WaveGANGenerator
 
 # TODO: write document for each function.
-# from models.utils.utils import Logger
 from models.utils.BaseGANUtils import BaseGANUtils
-
-# File Logger Configfuration
-
-# LOGGER = logging.getLogger('wavegan')
-# LOGGER.setLevel(logging.DEBUG)
 
 
 class WaveGANUtils(BaseGANUtils):
     def __init__(self):
-        super().__init__(WaveGANGenerator, WaveGANDiscriminator)
+        super().__init__(generator=WaveGANGenerator, discriminator=WaveGANDiscriminator)
 
-    def create_network(self, model_size):
-        return super().create_network(model_size)
+    def create_network(self, **kwargs):
+        return super().create_network(**kwargs)
 
-    def optimizers(self, arguments):
-        return super().optimizers(arguments)
+    def optimizers(self, arguments, **networks):
+        return super().optimizers(arguments, **networks)
 
     def sample_noise(self, arguments, latent_dim, device):
         return super().sample_noise(arguments, latent_dim, device)

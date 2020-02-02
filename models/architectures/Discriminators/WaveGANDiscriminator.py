@@ -1,9 +1,7 @@
 # TODO: It is an abstaction layer for WaveGAN-discriminator
 from torch import nn as nn
-from torch.nn import functional as F
 
-from models.custom_transforms.custom_transforms import PhaseShuffle
-from models.layers.BaseLayers import Conv1D
+from models.architectures.layers.BaseLayers import Conv1D
 
 
 class WaveGANDiscriminator(nn.Module):

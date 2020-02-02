@@ -9,19 +9,29 @@ from models.utils.BasicUtils import parallel_models
 
 
 class BaseGANUtils:
-    def __init__(self, Generator, Discriminator):
-        self.netG = Generator
-        self.netD = Discriminator
+    # def __init__(self, generator, discriminator):
+    # self.generator = generator
+    # self.discriminator = discriminator
+    def __init__(self, **networks):
+        self.networks = networks
+        self.networks_names = list(networks.keys())
+        self.network_values = list(networks.values())
 
-    def create_network(self, model_size):
-        self.netG = self.netG(model_size=model_size, upsample=True)
-        self.netD = self.netD(model_size=model_size)
+    def create_network(self, **kwargs):
+        # self.generator = self.generator(upsample=True, **kwargs)
+        # self.discriminator = self.discriminator(kwargs)
+        #
+        # netG, netD = parallel_models(self.generator, self.discriminator)
+        # return netG, netD
+        return [
+            parallel_models(net(**kwargs))[0]
+            if net_name.lower() == "discriminator"
+            else parallel_models(net(upsample=True, **kwargs))[0]
+            for net_name, net in zip(self.networks_names, self.network_values)
+        ]
 
-        netG, netD = parallel_models(self.netG, self.netD)
-        return netG, netD
-
-    def optimizers(self, arguments):
-        return optimizers(self.netD, self.netG, arguments)
+    def optimizers(self, arguments, **networks):
+        return optimizers(arguments, **networks)
 
     def sample_noise(self, arguments, latent_dim, device):
         sample_noise = torch.randn(arguments['sample-size'], latent_dim)
@@ -34,7 +44,7 @@ class BaseGANUtils:
 
         Logger.generating_samples()
 
-        sample_out = self.netG(sample_noise)  # sample_noise_Var
+        sample_out = self.generator(sample_noise)  # sample_noise_Var
         sample_out = sample_out.cpu().data.numpy()
         # from models.DataLoader.custom_DataLoader import save_samples
         # save_samples(sample_out, epoch, output_dir)

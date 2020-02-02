@@ -1,12 +1,11 @@
 # TODO: It is an abstaction layer for WaveGAN-generator
-from typing import NoReturn
 
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
 from config import noise_latent_dim
-from models.layers.BaseLayers import Transpose1dLayer
+from models.architectures.layers.BaseLayers import Transpose1dLayer
 
 
 class WaveGANGenerator(nn.Module):

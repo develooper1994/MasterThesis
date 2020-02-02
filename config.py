@@ -77,12 +77,6 @@ cuda: bool = torch.cuda.is_available()
 device: device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 # update the seed
 manual_seed: int = 2020  # 2019
-# random.seed(manual_seed)
-# torch.manual_seed(manual_seed)
-# np.random.seed(manual_seed)
-# if cuda:
-#     torch.cuda.manual_seed(manual_seed)
-#     torch.cuda.empty_cache()
 
 # Hyper parameter experiments.
 # order is important. DON'T CHANGE

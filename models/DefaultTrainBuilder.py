@@ -120,7 +120,7 @@ class DefaultRunManager:
         fix_noise = sample_noise(batch_size * generator_batch_size_factor).to(device)
         for net_name, net in zip(self.networks_names, self.networks):
             graphs_input = fix_noise if net_name is 'generator' else waveforms
-            self.tb.add_graph(net, graphs_input)
+            self.tb.add_graph(net.module, graphs_input)  # jit can't trace dataparallel
 
     # when run ends, close TensorBoard, zero epoch count
     def end_run(self):
@@ -199,6 +199,7 @@ class DefaultRunManager:
         # Record hyper-params into 'results'
         for k, v in self.run.params._asdict().items(): results[k] = v
         self.run.data.append(results)
+        # no need to display data
         df: DataFrame = pd.DataFrame.from_dict(self.run.data, orient='columns')
 
         # display epoch information and show progress
@@ -278,7 +279,11 @@ class DefaultRunManager:
 class DefaultTrainBuilder:
     number_of_experiments: Union[int, Any]
 
-    def __init__(self, GAN, data_loader, epochs=1) -> NoReturn:
+    def __init__(self, GAN: str , data_loader, epochs=1) -> None:
+        """
+
+        :type GAN: str
+        """
         self.epochs = epochs
         self.GAN = GAN
         self.data_loader = data_loader
@@ -289,24 +294,27 @@ class DefaultTrainBuilder:
         self._discriminator, self._generator = None, None
         self.optimizerD, self.optimizerG = None, None
 
+        GAN = GAN.lower()
         print(f"using {GAN} trainer")
-        if GAN == "wavegan":
-            gan_type: WaveGAN = WaveGAN()
-            self.discriminator, self.generator = gan_type.discriminator, gan_type.generator  # WaveGANDiscriminator, WaveGANGenerator
-            self.optimizerD, self.optimizerG = gan_type.optimizerD, gan_type.optimizerG  # wave_gan_utils.optimizers(arguments)
-            # self.set_nets(self.discriminator, self.generator)
-            self.data_loader = AudioDataset(input_dir=audio_dir, output_dir=output_dir)
-            self.base_trainer = DefaultTrainer(self.generator, self.discriminator, self.optimizerG, self.optimizerD, gan_type,
-                                               self.data_loader)
-            manager = DefaultRunManager(self.test_iter, discriminator=gan_type.discriminator,
-                                        generator=gan_type.generator)
-            gan_type.manager = manager
+        # if GAN == "wavegan":
+        #     gan_type: WaveGAN = WaveGAN()
+        #     self.discriminator, self.generator = gan_type.discriminator, gan_type.generator  # WaveGANDiscriminator, WaveGANGenerator
+        #     self.optimizerD, self.optimizerG = gan_type.optimizerD, gan_type.optimizerG  # wave_gan_utils.optimizers(arguments)
+        #     # self.set_nets(self.discriminator, self.generator)
+        #     self.data_loader = AudioDataset(input_dir=audio_dir, output_dir=output_dir)
+        #     self.base_trainer = DefaultTrainer(self.generator, self.discriminator, self.optimizerG, self.optimizerD, gan_type,
+        #                                        self.data_loader)
+        #     manager = DefaultRunManager(self.test_iter, discriminator=gan_type.discriminator,
+        #                                 generator=gan_type.generator)
+        #     gan_type.manager = manager
+        #
+        #     self.train_iter = self.base_trainer.train_iter
+        #     self.valid_iter = self.base_trainer.valid_iter
+        #     self.test_iter = self.base_trainer.test_iter
+        #     self.dataset = [self.train_iter, self.valid_iter, self.test_iter]
+        # elif GAN in ["wavegan-gp", "wavegan_gp", "wavegangp"]:
 
-            self.train_iter = self.base_trainer.train_iter
-            self.valid_iter = self.base_trainer.valid_iter
-            self.test_iter = self.base_trainer.test_iter
-            self.dataset = [self.train_iter, self.valid_iter, self.test_iter]
-        elif GAN in ["wavegan-gp", "wavegan_gp", "wavegangp"]:
+        if GAN in ["wavegan-gp", "wavegan_gp", "wavegangp"]:
             self.train_iter: WavDataLoader = WavDataLoader(os.path.join(target_signals_dir, 'train'))
             self.valid_iter: WavDataLoader = WavDataLoader(os.path.join(target_signals_dir, 'valid'))
             self.test_iter: WavDataLoader = WavDataLoader(os.path.join(target_signals_dir, 'test'))
@@ -319,11 +327,6 @@ class DefaultTrainBuilder:
             gan_type.manager = manager
             self.discriminator, self.generator = gan_type.discriminator, gan_type.generator
             # self.set_nets(self.discriminator, self.generator)
-
-            # self.base_trainer.train()
-            # visualize_loss(self.base_trainer.g_cost, self.base_trainer.valid_g_cost, 'Train', 'Val', 'Negative Critic Loss')
-            # latent_space_interpolation(self.base_trainer.generator, n_samples=5)
-
         else:
             print("I don't know your GAN. Make your own")
 
@@ -378,37 +381,12 @@ class DefaultTrainBuilder:
         # self.m.end_run()
         pass
 
-    # # DefaultTrainer train
-    # def all_epochs(self, loader) -> NoReturn:
-    #     start = time.time()
-    #     for epoch in range(1, epochs + 1):
-    #         self.m.begin_epoch()
-    #         # one batch
-    #         if self.GAN == "wavegan":
-    #             self.base_trainer.train_one_epoch(epoch, start)
-    #         elif self.GAN in ["wavegan-gp", "wavegan_gp", "wavegangp"]:
-    #             self.base_trainer.train_one_epoch()
-    #         else:
-    #             print("I don't know your GAN. Make your own")
-
     def train(self):
         self.base_trainer.train()
-        # self.all_epochs(self.train_iter)
 
     def experiments(self, runs=Runs) -> NoReturn:
         # start experiments with parameters
         for run in runs:
-            # if params changes, following line of code should reflect the changes too
-            # self.network = Network()  # !!!if network hyperparameters changes each time then it should inside of the loop!!!
-            # # Just an idea: call __init__ and than __forward__
-            # loader = torch.utils.data.DataLoader(train_set, batch_size=run.batch_size,
-            #                                      num_workers=1)  # num_workers=1 is
-            # # good for small data
-            # self.optimizer = optim.Adam(self.network.parameters(), lr=run.lr)
-
-            # self.m.begin_run(run, self.network, loader)
-            # self.all_epochs(loader)
-
             ## Experiments Start ##
             self.m.begin_run(run)
             # self.all_epochs(self.train_iter)
@@ -439,7 +417,6 @@ class DefaultTrainBuilder:
         self.experiments(runs)
 
         # when all runs are done, save results to files
-        time = datetime.datetime.now()
         # TODO! add time stamp like that. datetime.datetime.now().strftime("%c"). !OSError: [Errno 22] Invalid argument!
         self.m.save('results')
         print("End of all training experiments")
