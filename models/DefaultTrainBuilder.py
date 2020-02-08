@@ -279,7 +279,7 @@ class DefaultRunManager:
 class DefaultTrainBuilder:
     number_of_experiments: Union[int, Any]
 
-    def __init__(self, GAN: str , data_loader, epochs=1) -> None:
+    def __init__(self, GAN: str, data_loader, epochs=1) -> None:
         """
 
         :type GAN: str
