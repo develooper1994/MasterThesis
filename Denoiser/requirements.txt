@@ -1,0 +1,11 @@
+SoundFile
+scipy
+librosa
+h5py
+numba
+torch
+matplotlib
+numpy
+pyfftw
+torchvision
+tensorboard
