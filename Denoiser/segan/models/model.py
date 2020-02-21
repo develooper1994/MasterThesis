@@ -54,7 +54,7 @@ def wsegan_weights_init(m):
 #     else:
 #         m.eval()
 
-opts_important = f"epoch{opts.epoch}_batch_size{opts.batch_size}_dnorm_type{opts.dnorm_type}_critic_update{opts.critic_update}"
+opts_important = f"epoch{opts.epoch}_batch_size{opts.batch_size}_dnorm_type{opts.dnorm_type}"
 
 
 class SEGAN(Model):
@@ -62,7 +62,6 @@ class SEGAN(Model):
         super(SEGAN, self).__init__(name)
         self.save_path = opts.save_path
         self.preemph = opts.preemph
-        self.critic_iters = opts.critic_update
         self.reg_loss = getattr(F, opts.reg_loss)
         if generator is None:
             # Build G and D
@@ -434,7 +433,6 @@ class WSEGAN(SEGAN):
         self.generator = generator
         self.writer = None
         self.lbd = 1
-        self.critic_iters = opts.critic_update
         self.misalign_pair = opts.misalign_pair
         self.interf_pair = opts.interf_pair
         self.pow_weight = opts.pow_weight
