@@ -65,7 +65,7 @@ parser.add_argument('--no_train_gen', action='store_true', default=False,
                     help='Do NOT generate wav samples during training')
 parser.add_argument('--preemph_norm', action='store_true', default=False,
                     help='Inverts old  norm + preemph order in data loading, so denorm has to respect this aswell')
-parser.add_argument('--wsegan', action='store_true', default=True)  # False
+parser.add_argument('--wsegan', action='store_true', default=False)  # False
 parser.add_argument('--aewsegan', action='store_true', default=False)
 parser.add_argument('--vanilla_gan', action='store_true', default=False)
 parser.add_argument('--no_bias', action='store_true', default=False,
