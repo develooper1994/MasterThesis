@@ -244,8 +244,8 @@ class SEGAN(Model):
                 # if d_fake_loss > d_loss_critic or d_real_loss > d_loss_critic or not epoch-1 % self.critic_iters:
                 #     # for _ in range(1, self.critic_iters + 1):
                 #     for _ in range(1, self.critic_iters):
-                Genh, d_fake, d_fake_loss, d_real, d_real_loss = \
-                    self.train_critic_once(Dopt, clean, criterion, label, noisy)
+                #         Genh, d_fake, d_fake_loss, d_real, d_real_loss = \
+                #             self.train_critic_once(Dopt, clean, criterion, label, noisy)
 
                 # d_loss = d_fake_loss + d_real_loss
 
