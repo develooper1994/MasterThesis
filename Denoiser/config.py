@@ -122,8 +122,6 @@ parser.add_argument('--denc_poolings', type=int, nargs='+', default=[4, 4, 4, 4,
 parser.add_argument('--dnorm_type', type=str, default='vnorm',  # bnorm
                     help='Normalization to be used in D. Can be: (0) none, (1) snorm, (2) bnorm, (3) vnorm (Def: bnorm).')
 parser.add_argument('--phase_shift', type=int, default=5)
-parser.add_argument('--critic_update', type=int, default=5,  # 5
-                    help="Disc Update number(Def: 5)")
 parser.add_argument('--sinc_conv', action='store_true', default=True)  # False
 parser.add_argument('--windowing', type=str, default='hamming',  # hamming
                     help='Windowing to be used with Sinc_conv Can be: (1) rectangular, (2) triangular, (3) hann or '

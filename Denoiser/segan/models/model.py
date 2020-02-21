@@ -239,13 +239,14 @@ class SEGAN(Model):
                 Genh, d_fake, d_fake_loss, d_real, d_real_loss = \
                     self.train_critic_once(Dopt, clean, criterion, label, noisy)
 
-                # improve discriminator and prevent over-train problem.
-                d_loss_critic = self.critic_iters / epoch  # 10  # dynamic discriminator loss control.
-                if d_fake_loss > d_loss_critic or d_real_loss > d_loss_critic or not epoch-1 % self.critic_iters:
-                    # for _ in range(1, self.critic_iters + 1):
-                    for _ in range(1, self.critic_iters):
-                        Genh, d_fake, d_fake_loss, d_real, d_real_loss = \
-                            self.train_critic_once(Dopt, clean, criterion, label, noisy)
+                # # improve discriminator and prevent over-train problem.
+                # # Not: generator getting worse after long time
+                # d_loss_critic = self.critic_iters / epoch  # 10  # dynamic discriminator loss control.
+                # if d_fake_loss > d_loss_critic or d_real_loss > d_loss_critic or not epoch-1 % self.critic_iters:
+                #     # for _ in range(1, self.critic_iters + 1):
+                #     for _ in range(1, self.critic_iters):
+                Genh, d_fake, d_fake_loss, d_real, d_real_loss = \
+                    self.train_critic_once(Dopt, clean, criterion, label, noisy)
 
                 # d_loss = d_fake_loss + d_real_loss
 
@@ -499,9 +500,10 @@ class WSEGAN(SEGAN):
                 cost = F.mse_loss
 
             Genh, bsz, cost, d_loss = self.train_critic_once(Dopt, cost, bsz, clean, noisy)
-            if not iteration-1 % self.critic_iters:  # prevent over-train problem.
-                for _ in range(1, self.critic_iters):
-                    Genh, bsz, cost, d_loss = self.train_critic_once(Dopt, cost, bsz, clean, noisy)
+            # # Not: generator getting worse
+            # if not iteration-1 % self.critic_iters:  # prevent over-train problem.
+            #     for _ in range(1, self.critic_iters):
+            #         Genh, bsz, cost, d_loss = self.train_critic_once(Dopt, cost, bsz, clean, noisy)
 
             ## generator
             Gopt.zero_grad()
@@ -669,6 +671,7 @@ class AEWSEGAN(WSEGAN):
         # delete discriminator
         self.D = None
         self.l1_loss = opts.l1_loss
+        self.G, self.D = self.G.to(device), self.D.to(device)
 
     def get_n_params(self):
         super(AEWSEGAN, self).get_n_params()
@@ -687,7 +690,7 @@ class AEWSEGAN(WSEGAN):
 
         # attach opts to models so that they are saved altogether in ckpts
         self.G.optim = Gopt
-        self.G, self.D = self.G.to(device), self.D.to(device)
+
 
         # Build savers for end of epoch, storing up to 3 epochs each
         eoe_g_saver = Saver(self.G, opts.save_path, max_ckpts=3, optimizer=self.G.optim, prefix='EOE_G-')
