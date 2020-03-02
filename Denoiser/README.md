@@ -76,7 +76,7 @@ Thanks to:
 
 ### Notes
 
-* Multi-GPU is not supported yet in this framework.
+* Multi-GPU is not supported yet in this framework. # not fully implemented
 * Virtual Batch Norm is not included as in the very first SEGAN code, as similar results to those of original paper can be obtained with regular BatchNorm in D (ONLY D). # implemented
 * If using this code, parts of it, or developments from it, please cite the above reference.
 * I do not provide any support or assistance for the supplied code nor we offer any other compilation/variant of it.
