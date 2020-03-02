@@ -64,7 +64,7 @@ There is a WSEGAN, which stands for the dewhispering SEGAN [3]. This system is a
 3. [Whispered-to-voiced Alaryngeal Speech Conversion with GANs (Pascual et al. 2018)](https://arxiv.org/abs/1808.10687)
 
 ### Cite
-
+Thanks to:
 ```
 @article{pascual2017segan,
   title={SEGAN: Speech Enhancement Generative Adversarial Network},
