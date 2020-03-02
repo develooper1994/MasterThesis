@@ -3,17 +3,17 @@
 ### Requirements
 
 ```
-SoundFile==0.10.2
-scipy==1.1.0
-librosa==0.6.1
-h5py==2.8.0
-numba==0.38.0
-torch==0.4.1
-matplotlib==2.2.2
-numpy==1.14.3
-pyfftw==0.10.4
-tensorboardX==1.4
-torchvision==0.2.1
+SoundFile
+scipy
+librosa
+h5py
+numba
+torch
+matplotlib
+numpy
+pyfftw
+tensorboard
+torchvision
 ```
 Ahoprocessing tools (`ahoproc_tools`) is also needed, and the public repo is found [here](https://github.com/santi-pdp/ahoproc_tools).
 
@@ -77,8 +77,8 @@ Thanks to:
 ### Notes
 
 * Multi-GPU is not supported yet in this framework.
-* Virtual Batch Norm is not included as in the very first SEGAN code, as similar results to those of original paper can be obtained with regular BatchNorm in D (ONLY D).
+* Virtual Batch Norm is not included as in the very first SEGAN code, as similar results to those of original paper can be obtained with regular BatchNorm in D (ONLY D). # implemented
 * If using this code, parts of it, or developments from it, please cite the above reference.
-* We do not provide any support or assistance for the supplied code nor we offer any other compilation/variant of it.
-* We assume no responsibility regarding the provided code.
+* I do not provide any support or assistance for the supplied code nor we offer any other compilation/variant of it.
+* I assume no responsibility regarding the provided code.
 
