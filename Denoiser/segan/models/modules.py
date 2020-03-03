@@ -518,7 +518,7 @@ class VirtualGConv1DBlock(GConv1DBlock):
         self.ref_input = x_p
         ref_a = self.conv(self.ref_input)
         # ref_a, mean, mean_sq = self.forward_norm(ref_a, self.norm, ref_mean=None, ref_mean_sq=None)
-        mean_list  = self.norm.get_stats(ref_a)
+        mean_list = self.norm.get_stats(ref_a)
         self.mean = mean_list[0]
         self.mean_sq = mean_list[1]
         forward_first_list = self.norm.forward_first(ref_a, mean=self.mean, mean_sq=self.mean_sq)
