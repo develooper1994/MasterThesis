@@ -1,7 +1,5 @@
 # Speech Enhancement Generative Adversarial Network in PyTorch
 
-### Requirements
-
 ```
 SoundFile
 scipy
@@ -75,10 +73,21 @@ Thanks to:
 ```
 
 ### Notes
+* I have took this repo and changed to my needs. Thanks to authors
+* It is not a fully friendly fork! I have changed a lot.
 
-* Multi-GPU is not supported yet in this framework. # not fully implemented
-* Virtual Batch Norm is not included as in the very first SEGAN code, as similar results to those of original paper can be obtained with regular BatchNorm in D (ONLY D). # implemented
-* If using this code, parts of it, or developments from it, please cite the above reference.
+* Self-attention is not implemented. (yet)
+* Octave convolution is not implemented. (yet)
+* Sinc conv and some other generalized cosine windowing implemented. Note: don't use many or fully sincconv network. It will break all training because nature of sinc function.
+* I have implemented tensorboard with Pytorch.utils class.
+
+* I have experimented multiple discriminator updates for all architectures. All of architecture discriminators overfitting and generator become much much worse.
+* * I have tried dynamic or in other word conditional update discriminator over update but also unreasonably generator loss increases and training getting slower.
+* * I have also found training getting slower every epoch even complied before training.
+* Some Pytorch-JIT functionalities implemented. Training getting faster very slowly.
+* Multi-GPU is not fully implemented. Distiruted training is using very high resource so that i can not tested.
+* Virtual Batch Norm is not included as in the very first SEGAN code, as similar results to those of original paper can be obtained with regular BatchNorm in D (ONLY D). (# implemented)
 * I do not provide any support or assistance for the supplied code nor we offer any other compilation/variant of it.
 * I assume no responsibility regarding the provided code.
+* There is some unused classes. I am using for testing ideas.
 

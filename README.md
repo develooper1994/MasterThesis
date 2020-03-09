@@ -2,6 +2,7 @@
 
 # My Master Thesis
 # GAN LAB - version 0.12
+Not: Denoiser is current in Denoiser folder. WGAN is not giving good results for denoising.
 PyTorch implementation of [!TODO: link]()
 
 Before running, make sure you have the `sc09` dataset, and put that dataset into 
