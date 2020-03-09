@@ -51,7 +51,7 @@ def main(opts, memory_pin):
                          preemph_norm=opts.preemph_norm, random_scale=opts.random_scale)
     if memory_pin:
         dloader = DataLoader(dset, batch_size=opts.batch_size, shuffle=True, num_workers=opts.num_workers,
-                             pin_memory=device, collate_fn=collate_fn)
+                             pin_memory=True, collate_fn=collate_fn)
     else:
         dloader = DataLoader(dset, batch_size=opts.batch_size, shuffle=True, num_workers=opts.num_workers,
                              collate_fn=collate_fn)
@@ -65,7 +65,7 @@ def main(opts, memory_pin):
                                 slice_workers=opts.slice_workers, preemph_norm=opts.preemph_norm)
         if memory_pin:
             va_dloader = DataLoader(va_dset, batch_size=300, shuffle=False, num_workers=opts.num_workers,
-                                    pin_memory=device, collate_fn=collate_fn)
+                                    pin_memory=True, collate_fn=collate_fn)
         else:
             va_dloader = DataLoader(va_dset, batch_size=300, shuffle=False, num_workers=opts.num_workers,
                                     collate_fn=collate_fn)
