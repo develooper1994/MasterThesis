@@ -9,7 +9,7 @@ G_PRETRAINED_CKPT="segan+_generator.ckpt"
 # please specify the path to your folder containing
 # noisy test files, each wav in there will be processed
 #TEST_FILES_PATH="data_veu4/expanded_segan1_additive/noisy_testset/"
-TEST_FILES_PATH="/home/selcuk/.pytorch/DS_10283_2791/noisy_testset_wav/"
+TEST_FILES_PATH=$noisy_test_wav
 
 # please specify the output folder where cleaned files
 # will be saved

@@ -11,16 +11,16 @@ parser.add_argument('--save_path', type=str, default="seganv1_ckpt",  # seganv1_
 parser.add_argument('--d_pretrained_ckpt', type=str, default=None,
                     help='Path to ckpt file to pre-load in training (Def: None).')
 parser.add_argument('--g_pretrained_ckpt', type=str, default=None,
-                    help='Path to ckpt file to pre-load in training (Def: None).')
+                    help='Path to ckpt file to pre-load in training (Def: None).')  # /home/selcukcaglar08/full_audio_dataset/DS_10283_2791/segan+_generator.ckpt
 parser.add_argument('--cache_dir', type=str, default='data_cache')
 parser.add_argument('--clean_trainset', type=str,
-                    default='/home/selcuk/.pytorch/DS_10283_2791/clean_trainset_56spk_wav/')
+                    default='/home/selcukcaglar08/full_audio_dataset/DS_10283_2791/clean_trainset_56spk_wav')
 parser.add_argument('--noisy_trainset', type=str,
-                    default='/home/selcuk/.pytorch/DS_10283_2791/noisy_trainset_56spk_wav/')
+                    default='/home/selcukcaglar08/full_audio_dataset/DS_10283_2791/noisy_trainset_56spk_wav')
 parser.add_argument('--clean_valset', type=str,
-                    default=None)  # '/home/selcuk/.pytorch/DS_10283_2791/clean_testset_wav/')
+                    default=None)  # '/home/selcukcaglar08/full_audio_dataset/DS_10283_2791/clean_testset_wav' ||  # '/home/selcuk/.pytorch/DS_10283_2791/clean_testset_wav/')
 parser.add_argument('--noisy_valset', type=str,
-                    default=None)  # '/home/selcuk/.pytorch/DS_10283_2791/noisy_testset_wav/')
+                    default=None)  # '/home/selcukcaglar08/full_audio_dataset/DS_10283_2791/noisy_testset_wav' ||  # '/home/selcuk/.pytorch/DS_10283_2791/noisy_testset_wav/')
 parser.add_argument('--h5_data_root', type=str, default=None,
                     help='H5 data root dir (Def: None). The files will be found by split name {train, valid, test}.h5')
 parser.add_argument('--h5', action='store_true', default=False,

@@ -11,6 +11,7 @@ import argparse
 import random
 import torch
 import numpy as np
+import h5py
 
 
 class ArgParser(object):
@@ -82,11 +83,10 @@ if __name__ == '__main__':
     parser.add_argument('--g_pretrained_ckpt', type=str, default=None)
     parser.add_argument('--test_files', type=str, nargs='+', default=None)
     parser.add_argument('--h5', action='store_true', default=False)
-    parser.add_argument('--seed', type=int, default=111,
-                        help="Random seed (Def: 111).")
+    parser.add_argument('--seed', type=int, default=2020,
+                        help="Random seed (Def: 111).")  # 111
     parser.add_argument('--synthesis_path', type=str, default='segan_samples',
-                        help='Path to save output samples (Def: ' \
-                             'segan_samples).')
+                        help='Path to save output samples (Def: segan_samples).')
     parser.add_argument('--cuda', action='store_true', default=False)
     parser.add_argument('--soundfile', action='store_true', default=False)
     parser.add_argument('--cfg_file', type=str, default=None)
