@@ -78,4 +78,4 @@ def main(opts, memory_pin):
 
 if __name__ == '__main__':
     print('Parsed arguments: ', opts)
-    main(opts, False)
+    main(opts, True)

@@ -10,8 +10,10 @@
 
 # --batch_size 150
 python -u train.py --save_path ckpt_wsegan_misalign \
-	--clean_trainset /home/selcuk/.pytorch/DS_10283_2791/clean_trainset_56spk_wav/ \
-	--noisy_trainset /home/selcuk/.pytorch/DS_10283_2791/noisy_trainset_56spk_wav/ \
-	--cache_dir data_silent_cache --no_train_gen --batch_size 150  \
-	--wsegan --gnorm_type snorm --dnorm_type snorm --opt adam \
-	--data_stride 0.05 --misalign_pair
+        --clean_trainset $clean_train56spk_wav \
+        --noisy_trainset $noisy_train56spk_wav \
+        --clean_valset $clean_test_wav\
+        --noisy_valset $noisy_test_wav \
+        --cache_dir data_silent_cache --batch_size 150  \
+        --wsegan --gnorm_type snorm --dnorm_type snorm --opt adam \
+        --data_stride 0.05 --misalign_pair
