@@ -12,5 +12,4 @@ python3 -u train.py --save_path ckpt_segan_sinc+ \
         --noisy_trainset $noisy_train56spk_wav \
         --clean_valset $clean_test_wav\
         --noisy_valset $noisy_test_wav \
-        --g_pretrained_ckpt $pretrained \
         --cache_dir data_cache --no_train_gen --batch_size 300 --no_bias

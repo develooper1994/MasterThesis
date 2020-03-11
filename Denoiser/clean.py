@@ -33,6 +33,8 @@ def main(opts):
     args.cuda = opts.cuda
     if hasattr(args, 'wsegan') and args.wsegan:
         segan = WSEGAN(args)
+    elif hasattr(args, 'aesegan') and args.wsegan:
+        segan = AESEGAN(args)
     else:
         segan = SEGAN(args)
     segan.G.load_pretrained(opts.g_pretrained_ckpt, True)
@@ -59,7 +61,7 @@ def main(opts):
             twav = tbname
         else:
             tbname = os.path.basename(twav)
-            rate, wav = wavfile.read(twav)
+            rate, wav = wavfile.read(twav)  # TODO! error.
             wav = normalize_wave_minmax(wav)
         wav = pre_emphasize(wav, args.preemph)
         pwav = torch.FloatTensor(wav).view(1, 1, -1)
