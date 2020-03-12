@@ -1,4 +1,5 @@
 #!/bin/bash
+### TODO: !!! Still Problematic !!!
 
 CKPT_PATH="/home/selcukcaglar08/MasterThesis/Denoiser/ckpt_segan+"
 CKPT_SINC_PATH="/home/selcukcaglar08/MasterThesis/Denoiser/ckpt_segan_sinc+"
