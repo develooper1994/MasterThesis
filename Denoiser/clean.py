@@ -1,17 +1,23 @@
-import matplotlib
-
-from segan.models import *
-
-matplotlib.use('Agg')
+## Python standart imports
 import json
 import glob
 import os
 import timeit
 import argparse
 import random
+
+## outisde of standart imports
 import torch
 import numpy as np
 import h5py
+from scipy.io import wavfile
+
+import matplotlib
+matplotlib.use('Agg')
+
+## my modules
+from segan.models import *
+from Denoiser.segan import normalize_wave_minmax, pre_emphasize, SEGAN, WSEGAN, AEWSEGAN
 
 
 class ArgParser(object):
@@ -34,7 +40,7 @@ def main(opts):
     if hasattr(args, 'wsegan') and args.wsegan:
         segan = WSEGAN(args)
     elif hasattr(args, 'aesegan') and args.wsegan:
-        segan = AESEGAN(args)
+        segan = AEWSEGAN(args)
     else:
         segan = SEGAN(args)
     segan.G.load_pretrained(opts.g_pretrained_ckpt, True)
@@ -52,7 +58,7 @@ def main(opts):
         else:
             # assume we have list of files in input
             twavs = opts.test_files
-    print('Cleaning {} wavs'.format(len(twavs)))
+    print('Cleaning {} wavs'.format(len(twavs)))  # last correctly runned line
     beg_t = timeit.default_timer()
     for t_i, twav in enumerate(twavs, start=1):
         if opts.h5:

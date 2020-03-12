@@ -1,10 +1,12 @@
 #!/bin/bash
 
 CKPT_PATH="/home/selcukcaglar08/MasterThesis/Denoiser/ckpt_segan+"
+CKPT_SINC_PATH="/home/selcukcaglar08/MasterThesis/Denoiser/ckpt_segan_sinc+"
 
 # please specify the path to your G model checkpoint
 # as in weights_G-EOE_<iter>.ckpt
-G_PRETRAINED_CKPT="segan+_generator.ckpt"
+#G_PRETRAINED_CKPT="segan+_generator.ckpt"
+G_PRETRAINED_CKPT="weights_EOE_G-Generator-56101.ckpt"
 
 # please specify the path to your folder containing
 # noisy test files, each wav in there will be processed
@@ -15,13 +17,13 @@ TEST_FILES_PATH=$noisy_test_wav
 # will be saved
 SAVE_PATH="synth_segan_sinc+"
 
-python3 -u clean.py --g_pretrained_ckpt $CKPT_PATH/$G_PRETRAINED_CKPT \
-                    --test_files $TEST_FILES_PATH  \
-                    --cfg_file $CKPT_PATH/train.opts \
-                    --synthesis_path $SAVE_PATH --soundfile
+#python3 -u clean.py --g_pretrained_ckpt $CKPT_PATH/$G_PRETRAINED_CKPT \
+#                    --test_files $TEST_FILES_PATH  \
+#                    --cfg_file $CKPT_PATH/train.opts \
+#                    --synthesis_path $SAVE_PATH --soundfile
 
-python3 -u clean.py --g_pretrained_ckpt ckpt_segan_sinc+/weights_EOE_G-Generator-56101.ckpt \
-                    --test_files /home/selcukcaglar08/full_audio_dataset/DS_10283_2791/noisy_testset_wav \
-                    --cfg_file ckpt_segan_sinc+/train.opts \
-                    --synthesis_path $SAVE_PATH \
-                    --soundfile
+
+python3 -u clean.py --g_pretrained_ckpt $CKPT_SINC_PATH/$G_PRETRAINED_CKPT \
+                    --test_files $TEST_FILES_PATH \
+                    --cfg_file $CKPT_SINC_PATH/train.opts \
+                    --synthesis_path $SAVE_PATH --soundfile
