@@ -11,12 +11,15 @@ import torch
 import numpy as np
 import h5py
 from scipy.io import wavfile
+import soundfile as sf
 
 import matplotlib
 matplotlib.use('Agg')
 
 ## my modules
-from segan.models import *
+# from segan.models import *
+from segan.models.model import SEGAN, WSEGAN, AEWSEGAN
+from segan.datasets.se_dataset import normalize_wave_minmax, pre_emphasize
 
 
 class ArgParser(object):
@@ -52,9 +55,10 @@ def main(options):
     else:
         # process every wav in the test_files
         # if len(options.test_files) == 1:
-        if os.file.isdir(options.test_files):
+        #     twavs = glob.glob(os.path.join(options.test_files[0], '*.wav'))
+        if os.path.isdir(options.test_files):
             # assume we read directory
-            twavs = glob.glob(os.path.join(options.test_files[0], '*.wav'))
+            twavs = glob.glob(os.path.join(options.test_files, '*.wav'))
         else:
             # assume we have list of files in input
             twavs = options.test_files
@@ -88,7 +92,7 @@ def main(options):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--g_pretrained_ckpt', type=str, default="/home/selcukcaglar08/MasterThesis/Denoiser/ckpt_segan_sinc+")  # None
+    parser.add_argument('--g_pretrained_ckpt', type=str, default="/home/selcukcaglar08/MasterThesis/Denoiser/ckpt_segan_sinc+/weights_EOE_G-Generator-56101.ckpt")  # None
     parser.add_argument('--test_files', type=str, nargs='+', default="/home/selcukcaglar08/full_audio_dataset/DS_10283_2791/noisy_testset_wav")  # None
     parser.add_argument('--h5', action='store_true', default=False)
     parser.add_argument('--seed', type=int, default=2020,
