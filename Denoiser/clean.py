@@ -88,16 +88,16 @@ def main(opts):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--g_pretrained_ckpt', type=str, default=None)
-    parser.add_argument('--test_files', type=str, nargs='+', default=None)
+    parser.add_argument('--g_pretrained_ckpt', type=str, default="/home/selcukcaglar08/MasterThesis/Denoiser/ckpt_segan_sinc+")  # None
+    parser.add_argument('--test_files', type=str, nargs='+', default="/home/selcukcaglar08/full_audio_dataset/DS_10283_2791/noisy_testset_wav")  # None
     parser.add_argument('--h5', action='store_true', default=False)
     parser.add_argument('--seed', type=int, default=2020,
-                        help="Random seed (Def: 111).")  # 111
+                        help="Random seed (Def: 2020).")  # 111
     parser.add_argument('--synthesis_path', type=str, default='segan_samples',
                         help='Path to save output samples (Def: segan_samples).')
     parser.add_argument('--cuda', action='store_true', default=False)
-    parser.add_argument('--soundfile', action='store_true', default=False)
-    parser.add_argument('--cfg_file', type=str, default=None)
+    parser.add_argument('--soundfile', action='store_true', default=False)  # False
+    parser.add_argument('--cfg_file', type=str, default="ckpt_segan_sinc+/train.opts")  # None
 
     opts = parser.parse_args()
 
