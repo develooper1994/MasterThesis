@@ -27,3 +27,5 @@ python3 -u clean.py --g_pretrained_ckpt $CKPT_SINC_PATH/$G_PRETRAINED_CKPT \
                     --test_files $TEST_FILES_PATH \
                     --cfg_file $CKPT_SINC_PATH/train.opts \
                     --synthesis_path $SAVE_PATH --soundfile
+
+#python3 -u clean.py $CKPT_SINC_PATH/$G_PRETRAINED_CKPT $TEST_FILES_PATH False 2020 segan_samples False False train.opts

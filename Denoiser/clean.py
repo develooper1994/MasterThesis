@@ -17,7 +17,6 @@ matplotlib.use('Agg')
 
 ## my modules
 from segan.models import *
-from Denoiser.segan import normalize_wave_minmax, pre_emphasize, SEGAN, WSEGAN, AEWSEGAN
 
 
 class ArgParser(object):
