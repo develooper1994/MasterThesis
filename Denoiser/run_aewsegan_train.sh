@@ -15,5 +15,5 @@ python -u train.py --save_path ckpt_wsegan_misalign \
         --clean_valset $clean_test_wav\
         --noisy_valset $noisy_test_wav \
         --cache_dir data_silent_cache --no_train_gen --batch_size 150  \
-        --wsegan --gnorm_type snorm --dnorm_type snorm --opt adam \
+        --aewsegan --gnorm_type snorm --dnorm_type snorm --opt adam \
         --data_stride 0.05 --misalign_pair
