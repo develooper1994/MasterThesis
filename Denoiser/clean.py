@@ -51,7 +51,8 @@ def main(opts):
             twavs = f['data'][:]
     else:
         # process every wav in the test_files
-        if len(opts.test_files) == 1:
+        # if len(opts.test_files) == 1:
+        if os.file.isdir(opts.test_files):
             # assume we read directory
             twavs = glob.glob(os.path.join(opts.test_files[0], '*.wav'))
         else:
