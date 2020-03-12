@@ -1,5 +1,5 @@
 #!/bin/bash
-
+### TODO: !!! Still Problematic !!!
 
 #python3 -u train.py --save_path ckpt_wsegan_misalign \
 #        --clean_trainset data_veu4/silent/clean_trainset_M4 \
