@@ -87,6 +87,10 @@ class SEGAN(Model):
 
         self.G, self.D = self.G.to(device), self.D.to(device)
 
+        # create writer
+        tensorboard_file_name = f"{os.path.join(self.save_path, 'train')}_SEGAN_{opts_important}_{datetime.time(datetime.now())}"
+        self.writer = SummaryWriter(log_dir=tensorboard_file_name, comment=opts_important)
+
     def get_n_params(self):
         pp = 0
         for p in list(self.parameters()):
@@ -187,9 +191,9 @@ class SEGAN(Model):
     def train(self, opts, dloader, criterion, l1_init, l1_dec_step, l1_dec_epoch, log_freq, va_dloader=None):
         """ Train the SEGAN """
 
-        # create writer
-        tensorboard_file_name = f"{os.path.join(self.save_path, 'train')}_SEGAN_{opts_important}_{datetime.time(datetime.now())}"
-        self.writer = SummaryWriter(log_dir=tensorboard_file_name, comment=opts_important)
+        # # create writer
+        # tensorboard_file_name = f"{os.path.join(self.save_path, 'train')}_SEGAN_{opts_important}_{datetime.time(datetime.now())}"
+        # self.writer = SummaryWriter(log_dir=tensorboard_file_name, comment=opts_important)
 
         # Build the optimizers
         Gopt, Dopt = self.build_optimizers(opts)
@@ -429,9 +433,6 @@ class SEGAN(Model):
 
 class WSEGAN(SEGAN):
     def __init__(self, opts, name='WSEGAN', generator=None, discriminator=None):
-        self.discriminator = discriminator
-        self.generator = generator
-        self.writer = None
         self.lbd = 1
         self.misalign_pair = opts.misalign_pair
         self.interf_pair = opts.interf_pair
@@ -443,6 +444,10 @@ class WSEGAN(SEGAN):
         self.D.apply(wsegan_weights_init)
 
         self.G, self.D = self.G.to(device), self.D.to(device)
+
+        # create writer
+        tensorboard_file_name = f"{os.path.join(self.save_path, 'train')}_WSEGAN_{opts_important}_{datetime.time(datetime.now())}"
+        self.writer = SummaryWriter(log_dir=tensorboard_file_name, comment=opts_important)
 
     def get_n_params(self):
         super(WSEGAN, self).get_n_params()
@@ -460,9 +465,6 @@ class WSEGAN(SEGAN):
 
     def train(self, opts, dloader, criterion, l1_init, l1_dec_step, l1_dec_epoch, log_freq, va_dloader=None):
         """ Train the SEGAN """
-        # create writer
-        tensorboard_file_name = f"{os.path.join(self.save_path, 'train')}_WSEGAN_{opts_important}_{datetime.time(datetime.now())}"
-        self.writer = SummaryWriter(log_dir=tensorboard_file_name, comment=opts_important)
 
         # Build the optimizers
         Gopt, Dopt = self.build_optimizers(opts)
@@ -669,20 +671,22 @@ class AEWSEGAN(WSEGAN):
         # delete discriminator
         self.D = None
         self.l1_loss = opts.reg_loss
+
         self.G, self.D = self.G.to(device), self.D.to(device)
+
+        # create writer
+        tensorboard_file_name = f"{os.path.join(self.save_path, 'train')}_AEWSEGAN_{opts_important}_{datetime.time(datetime.now())}"
+        self.writer = SummaryWriter(log_dir=tensorboard_file_name, comment=opts_important)
 
     def get_n_params(self):
         super(AEWSEGAN, self).get_n_params()
 
     def train(self, opts, dloader, criterion, l1_init, l1_dec_step, l1_dec_epoch, log_freq, va_dloader=None):
         """ Train the SEGAN """
-        # create writer
-        tensorboard_file_name = f"{os.path.join(self.save_path, 'train')}_AEWSEGAN_{opts_important}_{datetime.time(datetime.now())}"
-        self.writer = SummaryWriter(log_dir=tensorboard_file_name, comment=opts_important)
         if opts.opt == 'rmsprop':
-            Gopt = optim.RMSprop(self.G.parameters, lr=opts.g_lr)
+            Gopt = optim.RMSprop(self.G.parameters(), lr=opts.g_lr)
         elif opts.opt == 'adam':
-            Gopt = optim.Adam(self.G.parameters, lr=opts.g_lr, betas=(0.5, 0.9))
+            Gopt = optim.Adam(self.G.parameters(), lr=opts.g_lr, betas=(0.5, 0.9))
         else:
             raise ValueError('Unrecognized optimizer {}'.format(opts.opt))
 
