@@ -668,7 +668,7 @@ class AEWSEGAN(WSEGAN):
         super(AEWSEGAN, self).__init__(opts, name=name, generator=generator, discriminator=discriminator)
         # delete discriminator
         self.D = None
-        self.l1_loss = opts.l1_loss
+        self.l1_loss = opts.reg_loss
         self.G, self.D = self.G.to(device), self.D.to(device)
 
     def get_n_params(self):

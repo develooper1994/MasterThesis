@@ -28,14 +28,14 @@ parser.add_argument('--h5', action='store_true', default=False,
 parser.add_argument('--data_stride', type=float, default=0.5,
                     help='Stride in seconds for data read')
 parser.add_argument('--seed', type=int, default=2020,  # 111
-                    help="Random seed (Def: 111).")
+                    help="Random seed (Def: 2020).")
 parser.add_argument('--epoch', type=int, default=100)  # 100
 parser.add_argument('--patience', type=int, default=100,
                     help='If validation path is set, there are denoising evaluations running for which '
                          'COVL, CSIG, CBAK, PESQ and SSNR are computed. Patience is number of validation '
                          'epochs to wait til breakining train loop. This is an unstable and slow process though, so we'
                          'avoid patience by setting it high atm (Def: 100).')
-parser.add_argument('--batch_size', type=int, default=136)  # 136  # 130  # 115  # 100  # 50
+parser.add_argument('--batch_size', type=int, default=136)  # 300 # 150 # 136  # 130  # 115  # 100  # 50
 parser.add_argument('--save_freq', type=int, default=50,
                     help="Batch save freq (Def: 50).")
 parser.add_argument('--slice_size', type=int, default=16384)
@@ -66,8 +66,8 @@ parser.add_argument('--no_train_gen', action='store_true', default=False,
 parser.add_argument('--preemph_norm', action='store_true', default=False,
                     help='Inverts old  norm + preemph order in data loading, so denorm has to respect this aswell')
 parser.add_argument('--wsegan', action='store_true', default=False)  # False
-parser.add_argument('--aewsegan', action='store_true', default=False)
-parser.add_argument('--vanilla_gan', action='store_true', default=False)
+parser.add_argument('--aewsegan', action='store_true', default=False)  # False
+parser.add_argument('--vanilla_gan', action='store_true', default=False)  # False
 parser.add_argument('--no_bias', action='store_true', default=False,
                     help='Disable all biases in Generator')
 parser.add_argument('--n_fft', type=int, default=2048)
