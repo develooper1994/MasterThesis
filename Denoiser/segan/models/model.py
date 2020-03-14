@@ -377,7 +377,8 @@ class SEGAN(Model):
     def evaluate(self, opts, dloader, log_freq, do_noisy=False, max_samples=1):
         """ Objective evaluation with PESQ, SSNR, COVL, CBAK and CSIG """
         self.G.eval()
-        self.D.eval()
+        if not self.D is None:
+            self.D.eval()
         evals = {'pesq': [], 'ssnr': [], 'csig': [],
                  'cbak': [], 'covl': []}
         # pesqs, ssnrs = [], []
@@ -666,6 +667,7 @@ class WSEGAN(SEGAN):
 
 class AEWSEGAN(WSEGAN):
     """ Auto-Encoder model """
+
     def __init__(self, opts, name='AEWSEGAN', generator=None, discriminator=None):
         super(AEWSEGAN, self).__init__(opts, name=name, generator=generator, discriminator=discriminator)
         # delete discriminator
@@ -693,7 +695,6 @@ class AEWSEGAN(WSEGAN):
         # attach opts to models so that they are saved altogether in ckpts
         self.G.optim = Gopt
 
-
         # Build savers for end of epoch, storing up to 3 epochs each
         eoe_g_saver = Saver(self.G, opts.save_path, max_ckpts=3, optimizer=self.G.optim, prefix='EOE_G-')
         # num_batches = len(dloader)
@@ -711,13 +712,13 @@ class AEWSEGAN(WSEGAN):
         for iteration in range(1, opts.epoch * len(dloader) + 1):
             beg_t = timeit.default_timer()
             uttname, clean, noisy, slice_idx = self.sample_dloader(dloader)
+            # bsz = clean.size(0)
+            Genh = self.infer_G(noisy, clean)
             if self.l1_loss:
                 loss = F.l1_loss(Genh, clean)
             else:
                 loss = F.mse_loss(Genh, clean)
 
-            # bsz = clean.size(0)
-            Genh = self.infer_G(noisy, clean)
             Gopt.zero_grad()
             loss.backward()
             Gopt.step()
