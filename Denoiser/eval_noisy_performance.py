@@ -5,7 +5,6 @@ import os
 
 import librosa
 import numpy as np
-import torch
 
 from segan.utils import *
 

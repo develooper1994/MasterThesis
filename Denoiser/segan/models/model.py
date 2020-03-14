@@ -376,7 +376,8 @@ class SEGAN(Model):
 
     def evaluate(self, opts, dloader, log_freq, do_noisy=False, max_samples=1):
         """ Objective evaluation with PESQ, SSNR, COVL, CBAK and CSIG """
-        self.G.eval()
+        if not self.G is None:
+            self.G.eval()
         if not self.D is None:
             self.D.eval()
         evals = {'pesq': [], 'ssnr': [], 'csig': [],
@@ -412,7 +413,8 @@ class SEGAN(Model):
                     args = [(clean_npy[i], Genh_npy[i], noisy_npy[i]) for i in range(clean.size(0))]
                 else:
                     args = [(clean_npy[i], Genh_npy[i], None) for i in range(clean.size(0))]
-                map_ret = self.pool.map(composite_helper, args)
+                map_ret = self.pool.map(composite_helper, args)  # error, None type is not iteratable
+
                 end_t = timeit.default_timer()
                 print('Time to process eval with {} samples : {} s'.format(clean.size(0), end_t - beg_t))
                 if bidx >= max_samples: break
@@ -786,7 +788,7 @@ class AEWSEGAN(WSEGAN):
                     self.gen_train_samples(clean_samples, noisy_samples, z_sample, iteration=iteration)
                 if va_dloader is not None:
                     if len(noisy_evals) == 0:
-                        sd, nsd = self.evaluate(opts, va_dloader, log_freq, do_noisy=True)
+                        sd, nsd = self.evaluate(opts, va_dloader, log_freq, do_noisy=True)  # error, None Type is not iteretable
                         self.writer.add_scalar('noisy_SD', nsd, iteration)
                     else:
                         sd = self.evaluate(opts, va_dloader, log_freq, do_noisy=False)
