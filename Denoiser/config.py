@@ -54,8 +54,8 @@ parser.add_argument('--preemph', type=float, default=0.95,
 parser.add_argument('--max_samples', type=int, default=None,
                     help='Max num of samples to train (Def: None).')
 parser.add_argument('--eval_workers', type=int, default=2)  # 2
-parser.add_argument('--slice_workers', type=int, default=1)  # 4
-parser.add_argument('--num_workers', type=int, default=1,  # 4
+parser.add_argument('--slice_workers', type=int, default=4)  # 4
+parser.add_argument('--num_workers', type=int, default=4,  # 4
                     help='DataLoader number of workers (Def: 1).')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Disable CUDA even if device is available')
