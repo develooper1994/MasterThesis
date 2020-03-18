@@ -434,6 +434,9 @@ class SEGAN(Model):
                 return evals
 
 
+# Whisper SEGAN
+# This is the samples page of the Whisper SEGAN project, where whispered voices suffering from impairments after a total laryngectomy are reconstructed with intonation and more expressiveness than a regression baseline by means of a speech enhancement GAN. The code for this project can found
+
 class WSEGAN(SEGAN):
     def __init__(self, opts, name='WSEGAN', generator=None, discriminator=None):
         self.lbd = 1
@@ -788,7 +791,8 @@ class AEWSEGAN(WSEGAN):
                     self.gen_train_samples(clean_samples, noisy_samples, z_sample, iteration=iteration)
                 if va_dloader is not None:
                     if len(noisy_evals) == 0:
-                        sd, nsd = self.evaluate(opts, va_dloader, log_freq, do_noisy=True)  # error, None Type is not iteretable
+                        sd, nsd = self.evaluate(opts, va_dloader, log_freq,
+                                                do_noisy=True)  # error, None Type is not iteretable
                         self.writer.add_scalar('noisy_SD', nsd, iteration)
                     else:
                         sd = self.evaluate(opts, va_dloader, log_freq, do_noisy=False)

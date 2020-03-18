@@ -82,7 +82,7 @@ class Discriminator(Model):
         if sinc_conv:
             # build sincnet module as first layer
             # self.sinc_conv = SincConv(fmaps[0] // 2, kwidth, opts.slice_size, stride=poolings[0], padding=True)
-            self.sinc_conv = SincConv(fmaps[0] // 2, 251, opts.slice_size, stride=poolings[0])
+            self.sinc_conv = SincConv(fmaps[0] // 2, 251, 16e3, stride=poolings[0])  # only supports 16khz
             # self.sinc_conv = SincConv(fmaps[0] // 2, 251, opts.slice_size, padding=True)  # 16e3
             self.sinc_conv = torch.jit.script(self.sinc_conv)
             ninp = fmaps[0]

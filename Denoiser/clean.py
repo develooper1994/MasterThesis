@@ -5,6 +5,7 @@ import os
 import timeit
 import argparse
 import random
+import subprocess
 
 ## outisde of standart imports
 import torch
@@ -20,6 +21,29 @@ matplotlib.use('Agg')
 # from segan.models import *
 from segan.models.model import SEGAN, WSEGAN, AEWSEGAN
 from segan.datasets.se_dataset import normalize_wave_minmax, pre_emphasize
+
+
+def get_input_sampling(file):
+    # I don't want to only support "16khz=16000hz" sampling rate.
+    # please install sox software. it is only compitable with linux and macosx.
+    result = subprocess.run(['soxi', file], stdout=subprocess.PIPE)
+    result_stdout = result.stdout.decode('utf-8')
+    result_stdout = result_stdout.splitlines()[1:-1]
+    result_stdout_sampling_str = str(result_stdout[2]).split(':')[-1]
+    sampling = int(result_stdout_sampling_str[1:])
+    return sampling
+
+
+def check_input_sampling(file):
+    sampling = get_input_sampling(file)
+    return sampling == 16000  # check sampling is valid.
+
+
+def downsample(wave, sampling):
+    k = sampling % 16000  # check sampling is valid.
+    if not k:  # downsample if sampling is not 16khz
+        wave = wave[::k]
+    return wave
 
 
 class ArgParser(object):
@@ -80,10 +104,11 @@ def main(options):
         g_wav, g_c = segan.generate(pwav)
         out_path = os.path.join(options.synthesis_path,
                                 tbname)
+        write_sampling = 48000  # 16000
         if options.soundfile:
-            sf.write(out_path, g_wav, 16000)
+            sf.write(out_path, g_wav, write_sampling)
         else:
-            wavfile.write(out_path, 16000, g_wav)
+            wavfile.write(out_path, write_sampling, g_wav)
         end_t = timeit.default_timer()
         print('Cleaned {}/{}: {} in {} s'.format(t_i, len(twavs), twav,
                                                  end_t - beg_t))
@@ -92,16 +117,16 @@ def main(options):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--g_pretrained_ckpt', type=str, default="/home/selcukcaglar08/MasterThesis/Denoiser/ckpt_segan_sinc+/weights_EOE_G-Generator-56101.ckpt")  # None
-    parser.add_argument('--test_files', type=str, nargs='+', default="/home/selcukcaglar08/full_audio_dataset/DS_10283_2791/noisy_testset_wav")  # None
+    parser.add_argument('--g_pretrained_ckpt', type=str, default="/home/selcuk/PycharmProjects/MasterThesis/Denoiser/ckpt_wsegan_misalign/weights_EOE_G-Generator-130680.ckpt")  # None
+    parser.add_argument('--test_files', type=str, nargs='+', default="/home/selcuk/.pytorch/DS_10283_2791/noisy_testset_wav/")  # None
     parser.add_argument('--h5', action='store_true', default=False)
     parser.add_argument('--seed', type=int, default=2020,
                         help="Random seed (Def: 2020).")  # 111
-    parser.add_argument('--synthesis_path', type=str, default='segan_samples',
+    parser.add_argument('--synthesis_path', type=str, default='wsegan_samples',
                         help='Path to save output samples (Def: segan_samples).')
-    parser.add_argument('--cuda', action='store_true', default=False)
-    parser.add_argument('--soundfile', action='store_true', default=False)  # False
-    parser.add_argument('--cfg_file', type=str, default="ckpt_segan_sinc+/train.opts")  # None
+    parser.add_argument('--cuda', action='store_true', default=True)
+    parser.add_argument('--soundfile', action='store_true', default=True)  # False
+    parser.add_argument('--cfg_file', type=str, default="ckpt_wsegan_misalign/train.opts")  # None
 
     options = parser.parse_args()
 

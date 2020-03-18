@@ -29,7 +29,7 @@ parser.add_argument('--data_stride', type=float, default=0.5,
                     help='Stride in seconds for data read')
 parser.add_argument('--seed', type=int, default=2020,  # 111
                     help="Random seed (Def: 2020).")
-parser.add_argument('--epoch', type=int, default=100)  # 100
+parser.add_argument('--epoch', type=int, default=20)  # 100
 parser.add_argument('--patience', type=int, default=100,
                     help='If validation path is set, there are denoising evaluations running for which '
                          'COVL, CSIG, CBAK, PESQ and SSNR are computed. Patience is number of validation '
