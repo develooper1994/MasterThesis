@@ -104,7 +104,7 @@ def main(options):
         g_wav, g_c = segan.generate(pwav)
         out_path = os.path.join(options.synthesis_path,
                                 tbname)
-        write_sampling = 48000  # 16000
+        write_sampling = options.write_sampling  # 16000
         if options.soundfile:
             sf.write(out_path, g_wav, write_sampling)
         else:
@@ -119,19 +119,30 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--g_pretrained_ckpt', type=str, default="/home/selcuk/PycharmProjects/MasterThesis/Denoiser/ckpt_wsegan_misalign/weights_EOE_G-Generator-130680.ckpt")  # None
     parser.add_argument('--test_files', type=str, nargs='+', default="/home/selcuk/.pytorch/DS_10283_2791/noisy_testset_wav/")  # None
-    parser.add_argument('--h5', action='store_true', default=False)
+    parser.add_argument('--h5', action='store_true', default=False,
+                        help="""If you have h5 file type, check it "True' (Def: False)""")
     parser.add_argument('--seed', type=int, default=2020,
                         help="Random seed (Def: 2020).")  # 111
     parser.add_argument('--synthesis_path', type=str, default='wsegan_samples',
                         help='Path to save output samples (Def: segan_samples).')
-    parser.add_argument('--cuda', action='store_true', default=True)
-    parser.add_argument('--soundfile', action='store_true', default=True)  # False
-    parser.add_argument('--cfg_file', type=str, default="ckpt_wsegan_misalign/train.opts")  # None
+    parser.add_argument('--cuda', action='store_true', default=True,
+                        help='Do you want to use cuda while cleaning audio? (Def: True)')
+    parser.add_argument('--soundfile', action='store_true', default=True,
+                        help='Do you want soundfile Python packes? (Def: True)')  # False
+    parser.add_argument('--cfg_file', type=str, default="ckpt_wsegan_misalign/train.opts",
+                        help="""train.opts configuration file inside of the same '--save_path' folder""")  # None
+    parser.add_argument('--write_sampling', type=int, default=48000,
+                        help='Specifying audio recodering sampling rate (Def: 48000)')  # 16000. Normally it only supports 16khz but my test wavs 48khz.
 
     options = parser.parse_args()
 
     if not os.path.exists(options.synthesis_path):
         os.makedirs(options.synthesis_path)
+
+    # save opts
+    with open(os.path.join(options.synthesis_path, 'clean.opts'), 'w') as cfg_f:
+        cfg_f.write(json.dumps(vars(options), indent=2))
+    print('Parsed arguments: ', json.dumps(vars(options), indent=2))
 
     # seed initialization
     random.seed(options.seed)
