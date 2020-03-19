@@ -82,9 +82,12 @@ def main(opts):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test_wavs', type=str, default="/home/selcuk/.pytorch/DS_10283_2791/noisy_testset_wav/")  # None
-    parser.add_argument('--clean_wavs', type=str, default="/home/selcuk/Desktop/All Thesis Results/segan+/segan+_pretrained_samples/")  # None
-    parser.add_argument('--logfile', type=str, default="statistics_wsegan_samples.txt")
+    parser.add_argument('--test_wavs', type=str, default="/home/selcuk/.pytorch/DS_10283_2791/noisy_testset_wav/",
+                        help="noisy test dataset")  # None
+    parser.add_argument('--clean_wavs', type=str, default="/home/selcuk/Desktop/All Thesis Results/"+"wsegan/wsegan_20epoch_samples/",
+                        help="cleaned audio to measure statistical performance")  # None
+    parser.add_argument('--logfile', type=str, default="statistics_"+"wsegan_20epoch_samples.txt",
+                        help="log file name of statistical measurements")
 
     opts = parser.parse_args()
 
