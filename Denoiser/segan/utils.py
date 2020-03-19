@@ -7,6 +7,7 @@ from subprocess import run, PIPE
 import librosa
 import numpy as np
 import soundfile as sf
+from pypesq import pesq
 import torch
 import torch.nn.functional as F
 from scipy.linalg import toeplitz
@@ -315,33 +316,36 @@ def eval_composite(clean_utt, Genh_utt, noisy_utt=None):
 def PESQ(ref_wav, deg_wav):
     # reference wav
     # degraded wav
+    sr = 16000
 
-    tfl = tempfile.NamedTemporaryFile()
-    ref_tfl = tfl.name + '_ref.wav'
-    deg_tfl = tfl.name + '_deg.wav'
+    # tfl = tempfile.NamedTemporaryFile()
+    # ref_tfl = tfl.name + '_ref.wav'
+    # deg_tfl = tfl.name + '_deg.wav'
+    #
+    # # if ref_wav.max() <= 1:
+    # #    ref_wav = np.array(denormalize_wave_minmax(ref_wav), dtype=np.int16)
+    # # if deg_wav.max() <= 1:
+    # #    deg_wav = np.array(denormalize_wave_minmax(deg_wav), dtype=np.int16)
+    #
+    # # wavfile.write(ref_tfl, 16000, ref_wav)
+    # # wavfile.write(deg_tfl, 16000, deg_wav)
+    # sf.write(ref_tfl, ref_wav, sr, subtype='PCM_16')
+    # sf.write(deg_tfl, deg_wav, sr, subtype='PCM_16')
 
-    # if ref_wav.max() <= 1:
-    #    ref_wav = np.array(denormalize_wave_minmax(ref_wav), dtype=np.int16)
-    # if deg_wav.max() <= 1:
-    #    deg_wav = np.array(denormalize_wave_minmax(deg_wav), dtype=np.int16)
-
-    # wavfile.write(ref_tfl, 16000, ref_wav)
-    # wavfile.write(deg_tfl, 16000, deg_wav)
-    sf.write(ref_tfl, ref_wav, 16000, subtype='PCM_16')
-    sf.write(deg_tfl, deg_wav, 16000, subtype='PCM_16')
-
-    curr_dir = os.getcwd()
+    # curr_dir = os.getcwd()
     # Write both to tmp files and then eval with pesqmain
-    try:
-        p = run(['pesqmain'.format(curr_dir),
-                 ref_tfl, deg_tfl, '+16000', '+wb'],
-                stdout=PIPE,
-                encoding='ascii')
-        res_line = p.stdout.split('\n')[-2]
-        results = re.split('\s+', res_line)
-        return results[-1]
-    except FileNotFoundError:
-        print('pesqmain not found! Please add it your PATH')
+    # try:
+    #     p = run(['pesqmain'.format(curr_dir),
+    #              ref_tfl, deg_tfl, '+'+str(sr), '+wb'],
+    #             stdout=PIPE,
+    #             encoding='ascii')
+    #     res_line = p.stdout.split('\n')[-2]
+    #     results = re.split('\s+', res_line)
+    #     return results[-1]
+    # except FileNotFoundError:
+    #     print('pesqmain not found! Please add it your PATH')
+    score = pesq(ref_wav, deg_wav, sr)
+    return score
 
 
 def SSNR(ref_wav, deg_wav, srate=16000, eps=1e-10):
@@ -416,10 +420,10 @@ def CompositeEval(ref_wav, deg_wav, log_all=False):
 
     # Compute the PESQ
     pesq_raw = PESQ(ref_wav, deg_wav)
-    if 'error!' not in pesq_raw:
-        pesq_raw = float(pesq_raw)
-    else:
-        pesq_raw = -1.
+    # if 'error!' not in pesq_raw:
+    #     pesq_raw = float(pesq_raw)
+    # else:
+    #     pesq_raw = -1.
 
     def trim_mos(val):
         return min(max(val, 1), 5)

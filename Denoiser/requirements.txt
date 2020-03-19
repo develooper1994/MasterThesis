@@ -9,3 +9,5 @@ numpy
 pyfftw
 torchvision
 tensorboard
+https://github.com/santi-pdp/ahoproc_tools
+https://github.com/develooper1994/python-pesq
