@@ -2,6 +2,12 @@
   <library name="Google App Engine SDK" type="python">
     <CLASSES>
       <root url="file://C:/Program Files (x86)/Google/Cloud SDK/google-cloud-sdk" />
+      <root url="file://C:/Program Files (x86)/Google/Cloud SDK/google-cloud-sdk/lib/gcloud.py" />
+      <root url="file://C:/Program Files (x86)/Google/Cloud SDK/google-cloud-sdk/lib/gcloud.pyc" />
+      <root url="file://C:/Program Files (x86)/Google/Cloud SDK/google-cloud-sdk/lib/googlecloudsdk" />
+      <root url="file://C:/Program Files (x86)/Google/Cloud SDK/google-cloud-sdk/lib/surface" />
+      <root url="file://C:/Program Files (x86)/Google/Cloud SDK/google-cloud-sdk/lib/third_party" />
+      <root url="file://C:/Program Files (x86)/Google/Cloud SDK/google-cloud-sdk/lib/tools" />
     </CLASSES>
     <SOURCES />
   </library>
