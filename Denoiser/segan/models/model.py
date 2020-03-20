@@ -438,6 +438,7 @@ class SEGAN(Model):
 # This is the samples page of the Whisper SEGAN project, where whispered voices suffering from impairments after a total laryngectomy are reconstructed with intonation and more expressiveness than a regression baseline by means of a speech enhancement GAN. The code for this project can found
 
 class WSEGAN(SEGAN):
+    """Whisper SEGAN"""
     def __init__(self, opts, name='WSEGAN', generator=None, discriminator=None):
         self.lbd = 1
         self.misalign_pair = opts.misalign_pair
@@ -679,7 +680,8 @@ class AEWSEGAN(WSEGAN):
         self.D = None
         self.l1_loss = opts.reg_loss
 
-        self.G, self.D = self.G.to(device), self.D.to(device)
+        self.G = self.G.to(device)
+        # self.D = self.D.to(device)
 
         # create writer
         tensorboard_file_name = f"{os.path.join(self.save_path, 'train')}_AEWSEGAN_{opts_important}_{datetime.time(datetime.now())}"
