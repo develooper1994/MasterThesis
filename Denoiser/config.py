@@ -101,7 +101,8 @@ parser.add_argument('--gdec_poolings', type=int, nargs='+', default=None,
 parser.add_argument('--gdec_kwidth', type=int,
                     default=None)
 parser.add_argument('--gnorm_type', type=str, default=None,
-                    help='Normalization to be used in G. Can be: (0) none, (1) snorm, (2) bnorm (Def: None).')
+                    help='Normalization to be used in G. Can be: (0) none, (1) snorm, (2) bnorm, (3) vnorm (Def: '
+                         'vnorm).')
 parser.add_argument('--no_z', action='store_true', default=False)
 parser.add_argument('--no_skip', action='store_true', default=False)
 parser.add_argument('--pow_weight', type=float, default=0.001)
@@ -120,7 +121,8 @@ parser.add_argument('--dkwidth', type=int, default=None,
 parser.add_argument('--denc_poolings', type=int, nargs='+', default=[4, 4, 4, 4, 4],
                     help='(Def: [4, 4, 4, 4, 4])')
 parser.add_argument('--dnorm_type', type=str, default='vnorm',  # bnorm
-                    help='Normalization to be used in D. Can be: (0) none, (1) snorm, (2) bnorm, (3) vnorm (Def: bnorm).')
+                    help='Normalization to be used in D. Can be: (0) none, (1) snorm, (2) bnorm, (3) vnorm (Def: '
+                         'vnorm).')
 parser.add_argument('--phase_shift', type=int, default=5)
 parser.add_argument('--sinc_conv', action='store_true', default=True)  # False
 parser.add_argument('--windowing', type=str, default='hamming',  # hamming

@@ -93,7 +93,12 @@ class Generator(Model):
                 l_i = pi - 1
                 skips[l_i] = {0: gskip}
                 setattr(self, 'alpha_{}'.format(l_i), skips[l_i][0])
-            enc_block = GConv1DBlock(ninp, fmap, kw, stride=pool, bias=bias, norm_type=norm_type)
+            if self.norm_type == "vnorm":
+                enc_block = VirtualGConv1DBlock(ninp, fmap, kwidth,
+                                                stride=pool, bias=bias, norm_type=norm_type)
+            else:
+                enc_block = GConv1DBlock(ninp, fmap, kwidth,
+                                         stride=pool, bias=bias, norm_type=norm_type)
             self.enc_blocks.append(enc_block)
             ninp = fmap
         self.enc_blocks = torch.jit.script(self.enc_blocks)
