@@ -126,9 +126,9 @@ parser.add_argument('--dnorm_type', type=str, default='vnorm',  # bnorm
 parser.add_argument('--phase_shift', type=int, default=5)
 parser.add_argument('--sinc_conv', action='store_true', default=True)  # False
 parser.add_argument('--windowing', type=str, default='hamming',  # hamming
-                    help='Windowing to be used with Sinc_conv Can be: (1) rectangular, (2) triangular, (3) hann or '
-                    '(4) hann (5) hamming (6) blackman (7) nuttall (8) blackman_nuttall '
-                    '(9) blackman_harris (10) flat_top  (Def: hamming).')
+                    help='Windowing to be used with Sinc_conv Can be: (1) rectangular, (2) triangular, (3) hann, '
+                    '(4) hamming, (5) blackman, (6) nuttall, (7) blackman_nuttall, '
+                    '(8) blackman_harris, (9) flat_top  (Def: hamming).')
 
 opts = parser.parse_args()
 opts.bias = not opts.no_bias
