@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-#python3 -u train.py --save_path ckpt_segan+ \
+#python3 -u train.py --save_path ckpt_new_segan \
 #                     --clean_valset $clean_test_wav\
 #                     --noisy_valset $noisy_test_wav \
 

@@ -1,13 +1,13 @@
 #!/bin/bash
 ### TODO: !!! Still Problematic !!!
 
-CKPT_PATH="/home/selcukcaglar08/MasterThesis/Denoiser/ckpt_segan+"
-CKPT_SINC_PATH="/home/selcukcaglar08/MasterThesis/Denoiser/ckpt_segan_sinc+"
+CKPT_PATH="/home/selcukcaglar08/MasterThesis/Denoiser/ckpt_new_segan"
+CKPT_SINC_PATH="/home/selcukcaglar08/MasterThesis/Denoiser/ckpt_new_segan_sinc"
 CKPT_WSEGAN_PATH="/home/selcuk/PycharmProjects/MasterThesis/Denoiser/ckpt_wsegan_misalign/"
 
 # please specify the path to your G model checkpoint
 # as in weights_G-EOE_<iter>.ckpt
-G_PRETRAINED_CKPT="segan+_generator.ckpt"
+G_PRETRAINED_CKPT="new_segan_generator.ckpt"
 G_PRETRAINED_CKPT="weights_EOE_G-Generator-56101.ckpt"
 G_PRETRAINED_WSEGAN_CKPT="weights_EOE_G-Generator-130680.ckpt"
 
