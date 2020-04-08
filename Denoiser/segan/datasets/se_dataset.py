@@ -17,8 +17,8 @@ from torch.utils.data._utils.collate import default_collate
 from torch.utils.data.dataset import Dataset
 from tqdm import tqdm
 
-from Denoiser.segan.datasets.ahoproc_tools.interpolate import interpolation
-from Denoiser.segan.datasets.ahoproc_tools.io import read_aco_file
+from Denoiser.segan.datasets.data_tools.interpolate import interpolation
+from Denoiser.segan.datasets.data_tools.io import read_aco_file
 
 from config import opts
 
