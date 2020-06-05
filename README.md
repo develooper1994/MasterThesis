@@ -1,83 +1,116 @@
-# This repository is not a full package yet.
+# SEGAN 
+# SE-GAN
+# Speech Enhancement GAN
+# Speech Enhancement Generative Adversarial Network
 
-# My Master Thesis
-# GAN LAB - version 0.12
-Not: Denoiser is current in Denoiser folder. WGAN is not giving good results for denoising.
-PyTorch implementation of [!TODO: link]()
+### Pretrained Model
+Old SEGAN generator weights are released and can be downloaded in [this link](http://veu.talp.cat/seganp/release_weights/segan+_generator.ckpt).
+Make sure you place this file into the `ckpt_segan` directory to make it work with the proper `train.opts` config file within that folder. 
+The script `run_segan_clean.sh` will properly read the ckpt in that directory as it is configured to be used with this referenced file.
 
-Before running, make sure you have the `sc09` dataset, and put that dataset into 
-config.py DATASET_NAME variable with full path and filename
+### Introduction to old Segan
+Old SEGAN uses skip connections between narrower and expander layers to ensure data won't mix up while training.
+WaveGAN has this issue while denoising mean while it is not designed with this intention. Loss function is LSGAN
 
-If you want to output different directory, change config.py OUTPUT_PATH variable with full path and filename
+![Old_SEGAN_G](assets/segan.png)
 
-## Quick Start:
-# 1.Installation
+
+### Introduction to New Segan
+New SEGAN is an improved version of SEGAN [1]. New SEGAN has a skip connections between narrower and expander layers. 
+Also there is residual skip connections to upper layers of expander. There is two method to combine skip connections;
+#####['summation' and 'concatenate']
+Narrower and expander skip connections combines and connects to upper expander layer.
+
+Loss function is LSGAN. Loss function doesn't change while skip connections
+
+![New_SEGAN_G](assets/new_segan.png)
+
+
+### Introduction to scripts
+Three models are ready to train and use to make wav2wav speech enhancement conversions.
+Denoising utterances with its generator network (G). <br/>
+<b>Note: Determine batch size according to the memory size.</b>
+  
+To train this model, the following command should be ran:
+
 ```
-sudo apt-get install libav-tools
-```
-<b>I reccomend to look at requirements.txt</b>
-### Requirements
-
-```
-pip install -r requirements.txt
+python train.py --save_path ckpt_segan+ --batch_size 300 \
+		--clean_trainset data/clean_trainset \
+		--noisy_trainset data/noisy_trainset \
+		--cache_dir data/cache
 ```
 
-<br/>
+Read `run_new_segan_train.sh` for more guidance.
+This will use the default parameters to structure both G and D, but they can be tunned with many options.
+For example, one can play with `--d_pretrained_ckpt` and/or `--g_pretrained_ckpt` to specify a departure pre-train checkpoint to fine-tune some characteristics of our enhancement system, like language, as in [2].
 
-# 2. Download dataset
-WaveGAN can now be trained on datasets of arbitrary audio files (previously required preprocessing). You can use any folder containing audio, but here are a few example datasets to help you get started:
+Cleaning files is done by specifying the generator weights checkpoint, its config file from training and appropriate paths for input and output files (Use `soundfile` wav writer backend (recommended) specifying the `--soundfile` flag):
 
-- [Speech Commands Zero through Nine (SC09)](http://deepyeti.ucsd.edu/cdonahue/wavegan/data/sc09.tar.gz)
-- [Drum sound effects](http://deepyeti.ucsd.edu/cdonahue/wavegan/data/drums.tar.gz)
-- [Bach piano performances](http://deepyeti.ucsd.edu/cdonahue/wavegan/data/mancini_piano.tar.gz)
-
-### WaveGan Parameters (params.py)
-- target_signals_dir: folder including train subfolder contianing train wav data files
-- model_prefix: model name used for saving mode
-- n_iterations: number of train iterations
-- lr_g: generator learning rate
-- lr_d: discriminator learning rate
-- beta11: Adam optimizer first  decay rate for moment estimates
-- beta2:  Adam optimizer second  decay rate for moment estimates
-- decay_lr: flag used to decay learning rate linearly through iterations till reaching zero at 100k iteration
-- generator_batch_size_factor: in some cases we might try to multiply batch size by a factor when updatng the generator to give it a more correct and meaningful signal from the discriminator
-- n_critic: updating the generator every n updates to the critic/ discriminator
-- p_coeff: gradient penalty regularization factor
-- batch_size: batch size during training default 10
-- noise_latent_dim: dimension of the latent dim used to generate waves
-- model_capacity_size: capacity of the model default 64 can be 32 when generating longer window length of 2-4 seconds
-- output_dir: directory that contains saved model and saved samples during the training
-- window_length: window length of the output utterance can be 16384 (1 sec), 32768 (2 sec), 65536 (4 sec)
-- manual_seed: model random seed 
-- num_channels: to define number of channels used in the data 
-
-# 3.Run
-
-For `sc09` task, **make sure `sc09` dataset under your current project filepath befor run your code.**
 ```
-$ python train.py
+python clean.py --g_pretrained_ckpt ckpt_segan+/<weights_ckpt_for_G> \
+		--cfg_file ckpt_segan+/train.opts --synthesis_path enhanced_results \
+		--test_files data/noisy_testset --soundfile
 ```
-### Tensorboard Visualization
-Run in different console to open Tensorboard.
-tensorboard --logdir=runs
 
-##### !!! WARNING !!
-If you want to use Tensorboard, you may see some "TracerWarning" warning. This warning throws due to 
-MasterThesis/models/custom_transform/custom_transform.py/PhaseShuffle/forward Converting a tensor to a Python index
+Read `run_new_segan_clean.sh` for more guidance.
 
-There is a advice in main documentation
-PYTORCH_JIT=0 python main.py
-https://pytorch.org/docs/stable/jit.html#disable-jit-for-debugging
+There is a WSEGAN, which stands for the dewhispering SEGAN [3]. 
+This system is activated (rather than vanilla SEGAN) by specifying the `--wsegan` flag. 
+Additionally, the `--misalign_pair` flag will add another fake pair(augmentation) to the adversarial loss indicating that content changes between input and output of G is bad, something that improved our results for [3].
 
-#### Training time
-* For `SC09` dataset, <don't know yet> takes nearly <don't know yet> to get reasonable result.
-* For `piano` piano dataset, <don't know yet> takes <don't know yet> to get reasonable result.
-* Increase the `BATCH_SIZE` from 10 to 32 or 64 can acquire shorter per-epoch time on multiple-GPU but slower gradient descent learning rate.
+There is a AEWSEGAN, which stands for the disable discriminator to faster training and get a more lightweight solution. 
+This system is activated (rather than vanilla SEGAN) by specifying the `--aewsegan` flag. 
+Additionally, the `--misalign_pair` flag will add another fake pair(augmentation) to the adversarial loss indicating that content changes between input and output of G is bad, something that improved our results for [3].
 
-## Results
-Generated  ! TODO: soundcloud
+### References:
+1. [SEGAN: Speech Enhancement Generative Adversarial Network (Pascual et al. 2017)](https://arxiv.org/abs/1703.09452)
+2. [Language and Noise Transfer in Speech Enhancement GAN (Pascual et al. 2018)](https://arxiv.org/abs/1712.06340)
+3. [Whispered-to-voiced Alaryngeal Speech Conversion with GANs (Pascual et al. 2018)](https://arxiv.org/abs/1808.10687)
+4. [SEGAN linkedin slayt](https://www.slideshare.net/xavigiro/segan-speech-enhancement-generative-adversarial-network?from_action=save)
+5. [Dataset](https://datashare.is.ed.ac.uk/handle/10283/1942)
 
-Generated  ! TODO: soundcloud
+### Cite
+Thanks to:
+```
+@article{pascual2017segan,
+  title={SEGAN: Speech Enhancement Generative Adversarial Network},
+  author={Pascual, Santiago and Bonafonte, Antonio and Serr{\`a}, Joan},
+  journal={arXiv preprint arXiv:1703.09452},
+  year={2017}
+}
+```
 
-## Contributions
-! TODO
+```
+Thanks to Jetbrains. They gave me open source free licence of thier product while i am researching.
+I am very appreciated.
+```
+
+### Notes
+* I have took this repositories, combined and changed to my needs. Thanks to authors of article
+* It is not a fully friendly fork! I have changed a lot.
+* The main deep learning framework in this repository is Pytorch 
+* !!! There is not going to frequently update !!!
+<br/><br/>
+* Sincconv and some other generalized cosine windowing implemented.<br/>
+Note: don't use many or fully sincconv network. It will break all training because nature of sinc function.
+* I have implemented tensorboard with Pytorch.utils class.
+<br/><br/>
+* I have experimented multiple discriminator updates for all architectures. All of architecture discriminators overfitting and generator become much much worse.
+* * I have tried dynamic or in other word conditional update discriminator over update but also unreasonably generator loss increases and training getting slower.
+* * I have also found training getting slower every epoch even complied before training.
+* Some Pytorch-JIT functionalities implemented. Training getting faster very slowly.
+* Multi-GPU is not fully implemented. Distiruted training is using very high resource so that i can not tested.
+* Virtual Batch Norm is not included as in the very first SEGAN code, as similar results to those of original paper can be obtained with regular BatchNorm in D (ONLY D). (# implemented)
+<br/><br/>
+* I do not provide any support or assistance for the supplied code nor we offer any other compilation/variant of it.
+* I assume no responsibility regarding the provided code.
+<br/><br/>
+* There is some unused classes. I am using for testing ideas.
+
+### Future Plans
+* Loss function change to wasserstein loss. New SEGAN uses least square loss.
+* Add skip connections to narrower.
+* Better feedback from discriminator. Discriminator just gives 0(fake) and 1(real). 
+I want to get not bool values. It will improves all GANS dramatically.
+* Self-attention is not implemented. (yet)
+* Octave convolution is not implemented. (yet)

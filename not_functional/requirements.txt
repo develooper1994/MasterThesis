@@ -1,0 +1,15 @@
+IPython
+tqdm
+numpy
+pandas
+matplotlib
+librosa
+pescador
+
+torch
+torchaudio
+torchvision
+tensorboard
+
+argparse
+datetime

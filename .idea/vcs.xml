@@ -2,6 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/models/optimizers/Best-Deep-Learning-Optimizers" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/not_functional/models/optimizers/Best-Deep-Learning-Optimizers" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/others/models/optimizers/Best-Deep-Learning-Optimizers" vcs="Git" />
   </component>
 </project>
