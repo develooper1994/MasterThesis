@@ -2,7 +2,8 @@
 # SE-GAN
 # Speech Enhancement GAN
 # Speech Enhancement Generative Adversarial Network
-
+### Presentation(in Turkish)
+https://www.youtube.com/watch?v=UMyHcdOsduU
 ### Pretrained Model
 Old SEGAN generator weights are released and can be downloaded in [this link](http://veu.talp.cat/seganp/release_weights/segan+_generator.ckpt).
 Make sure you place this file into the `ckpt_segan` directory to make it work with the proper `train.opts` config file within that folder. 
