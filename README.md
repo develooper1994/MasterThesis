@@ -2,7 +2,7 @@
 # SE-GAN
 # Speech Enhancement GAN
 # Speech Enhancement Generative Adversarial Network
-### Thesis(in Turkish)
+### Thesis - Paper(in Turkish)
 https://tez.yok.gov.tr/UlusalTezMerkezi/tezSorguSonucYeni.jsp </br>
 ### Presentation(in Turkish)
 https://www.youtube.com/watch?v=UMyHcdOsduU
