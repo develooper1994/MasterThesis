@@ -2,8 +2,9 @@
 # SE-GAN
 # Speech Enhancement GAN
 # Speech Enhancement Generative Adversarial Network
+### Thesis(in Turkish)
+https://tez.yok.gov.tr/UlusalTezMerkezi/tezSorguSonucYeni.jsp </br>
 ### Presentation(in Turkish)
-https://tez.yok.gov.tr/UlusalTezMerkezi/tezSorguSonucYeni.jsp
 https://www.youtube.com/watch?v=UMyHcdOsduU
 ### Pretrained Model
 Old SEGAN generator weights are released and can be downloaded in [this link](http://veu.talp.cat/seganp/release_weights/segan+_generator.ckpt).
