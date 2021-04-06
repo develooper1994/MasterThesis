@@ -3,7 +3,7 @@
 # Speech Enhancement GAN
 # Speech Enhancement Generative Adversarial Network
 ### Thesis - Paper(in Turkish)
-https://tez.yok.gov.tr/UlusalTezMerkezi/tezSorguSonucYeni.jsp </br>
+https://tez.yok.gov.tr/UlusalTezMerkezi/TezGoster?key=fl0Kw4p1rmMDotyKRdYv1NC_jHlQf4_EkB366lPjbYSgMgBkdDEloOymzKUxe2_A </br>
 ### Presentation(in Turkish)
 https://www.youtube.com/watch?v=UMyHcdOsduU
 ### Pretrained Model
